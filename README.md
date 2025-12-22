@@ -1,4 +1,4 @@
-# 📱 CRYSTAL PRO v2.2 - PWA MOBILE READY
+# 📱 Agenda v2.2 - PWA MOBILE READY
 
 ## 🎯 RESUMEN RÁPIDO
 
