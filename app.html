@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Sistema integrado de tareas, asignaturas, notas, gastos y horario">
+    <meta name="theme-color" content="#bc8cff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Agenda">
+    <meta name="application-name" content="Agenda">
+    <meta name="msapplication-TileColor" content="#bc8cff">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    <link rel="icon" type="image/png" sizes="16x16" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23bc8cff' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>CP</text></svg>">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23bc8cff' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>CP</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23bc8cff' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='90' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>CP</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <title>APP</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* DARK MODE - Blanco y Negro con Glassmorphism */
+            --bg-gradient: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+            --bg-base: #000000;
+            --glass-light: rgba(255, 255, 255, 0.09);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-hover: rgba(255, 255, 255, 0.18);
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --accent: #ffffff;
+            --accent-glow: #cccccc;
+            --red: #ff6b6b;
+            --red-light: rgba(255, 107, 107, 0.15);
+            --red-border: rgba(255, 107, 107, 0.3);
+            --green: #3a3a3a;
+            --blue: #4a4a4a;
+            --yellow: #6a6a6a;
+            --nav-glass: rgba(0, 0, 0, 0.9);
+            --blur-amount: 15px;
+            --shadow-glow: rgba(255, 255, 255, 0.1);
+        }
+
+        body.light-mode {
+            /* LIGHT MODE - Blanco y Negro Inverso con Glassmorphism */
+            --bg-gradient: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%);
+            --bg-base: #ffffff;
+            --glass-light: rgba(0, 0, 0, 0.08);
+            --glass-border: rgba(0, 0, 0, 0.18);
+            --glass-hover: rgba(0, 0, 0, 0.12);
+            --text-main: #000000;
+            --text-dim: #555555;
+            --accent: #000000;
+            --accent-glow: #333333;
+            --red: #ff6b6b;
+            --red-light: rgba(255, 107, 107, 0.15);
+            --red-border: rgba(255, 107, 107, 0.3);
+            --green: #cccccc;
+            --blue: #bbbbbb;
+            --yellow: #aaaaaa;
+            --nav-glass: rgba(255, 255, 255, 0.98);
+            --blur-amount: 15px;
+            --shadow-glow: rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            font-family: -apple-system, system-ui, 'Segoe UI', 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px;
+            padding-bottom: 320px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        /* RESPONSIVE */
+        @media (min-width: 768px) {
+            body {
+                padding: 15px;
+                padding-bottom: 120px;
+            }
+            .container {
+                max-width: 600px;
+                padding: 15px 0;
+            }
+        }
+
+        .view {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .view.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* HEADER */
+        #live-date {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            text-transform: capitalize;
+            text-shadow: 0 0 15px var(--shadow-glow);
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            padding-left: 5px;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+        }
+
+        /* GLASS MORPHISM CARDS */
+        .card {
+            background: var(--glass-light);
+            backdrop-filter: blur(var(--blur-amount));
+            -webkit-backdrop-filter: blur(var(--blur-amount));
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 15px;
+            margin-bottom: 12px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
+                        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 80%);
+            pointer-events: none;
+        }
+
+        @media (min-width: 768px) {
+            .card {
+                border-radius: 28px;
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* FORMS */
+        .inline-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .row-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        @media (min-width: 768px) {
+            .inline-form {
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            .row-form {
+                gap: 10px;
+            }
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="time"],
+        input[type="number"],
+        select,
+        textarea {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 12px;
+            outline: none;
+            font-size: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="text"]::placeholder,
+        textarea::placeholder {
+            color: var(--text-dim);
+            opacity: 0.6;
+        }
+
+        @media (min-width: 768px) {
+            input[type="text"],
+            input[type="date"],
+            input[type="time"],
+            input[type="number"],
+            select,
+            textarea {
+                padding: 12px 14px;
+                border-radius: 14px;
+                font-size: 0.9rem;
+            }
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3),
+                        0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            min-height: 44px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: left 0.3s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .btn {
+                padding: 12px 15px;
+                border-radius: 14px;
+                font-size: 0.9rem;
+                min-height: auto;
+            }
+        }
+
+        .btn-check {
+            background: var(--accent);
+            color: var(--bg-base);
+            box-shadow: 0 4px 15px var(--shadow-glow);
+            border: 1px solid var(--accent);
+        }
+
+        .btn-check:hover {
+            box-shadow: 0 8px 25px var(--shadow-glow);
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: var(--bg-base);
+            box-shadow: 0 4px 15px var(--shadow-glow);
+            border: 1px solid var(--accent);
+        }
+
+        .btn-accent:hover {
+            box-shadow: 0 8px 25px var(--shadow-glow);
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--accent);
+            color: var(--accent);
+            box-shadow: inset 0 1px 1px var(--shadow-glow);
+        }
+
+        .btn-outline:hover {
+            background: var(--glass-light);
+            box-shadow: inset 0 1px 1px var(--shadow-glow),
+                        0 0 15px var(--shadow-glow);
+        }
+
+        .btn-red {
+            background: var(--red-light);
+            color: var(--red);
+            border: 1.5px solid var(--red);
+        }
+
+        .btn-red:hover {
+            background: rgba(255, 107, 107, 0.25);
+            border-color: var(--red);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-action {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* ITEMS */
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--glass-light);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 1px var(--shadow-glow);
+        }
+
+        .item-row:hover {
+            background: var(--glass-hover);
+            border-color: var(--accent);
+            transform: translateX(2px);
+            box-shadow: inset 0 1px 1px var(--shadow-glow),
+                        0 4px 12px var(--shadow-glow);
+        }
+
+        .item-row.done {
+            opacity: 0.5;
+            text-decoration: line-through;
+            border-style: dashed;
+        }
+
+        .sub-section {
+            margin-left: 15px;
+            border-left: 3px solid var(--accent);
+            padding-left: 15px;
+            margin-top: 10px;
+        }
+
+        .section-box {
+            background: var(--glass-light);
+            backdrop-filter: blur(var(--blur-amount));
+            -webkit-backdrop-filter: blur(var(--blur-amount));
+            border-radius: 20px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 1px 1px var(--shadow-glow);
+        }
+
+        /* EXAM CARD */
+        .exam-card {
+            border-left: 4px solid var(--accent);
+            background: var(--glass-light);
+        }
+
+        .exam-card:hover {
+            background: var(--glass-hover);
+        }
+
+        .days-left {
+            font-size: 0.7rem;
+            background: var(--accent);
+            color: var(--bg-base);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px var(--shadow-glow);
+            border: 1px solid var(--accent);
+        }
+
+        /* SCHEDULE ITEM */
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--glass-light);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            padding: 12px;
+            border-radius: 16px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--blue);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 1px var(--shadow-glow);
+        }
+
+        .schedule-item:hover {
+            background: var(--glass-hover);
+            border-left-color: var(--accent);
+            transform: translateX(2px);
+            box-shadow: inset 0 1px 1px var(--shadow-glow),
+                        0 4px 12px var(--shadow-glow);
+        }
+
+        .schedule-item.practica {
+            border-left-color: var(--green);
+            background: rgba(81, 207, 102, 0.1);
+            border-color: rgba(81, 207, 102, 0.2);
+        }
+
+        .schedule-item.practica:hover {
+            background: rgba(81, 207, 102, 0.15);
+        }
+
+        .time-box {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 75px;
+        }
+
+        .subject-box {
+            flex-grow: 1;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* GASTOS */
+        .total-header {
+            text-align: center;
+            padding: 20px 0;
+            background: var(--glass-light);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 24px;
+            margin-bottom: 10px;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 1px 1px var(--shadow-glow);
+        }
+
+        .total-val {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--accent);
+            display: block;
+            text-shadow: 0 0 15px var(--shadow-glow);
+        }
+
+        .cat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cat-btn {
+            background: var(--glass-light);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 15px;
+            border-radius: 18px;
+            cursor: pointer;
+            text-align: left;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 1px var(--shadow-glow);
+        }
+
+        .cat-btn:hover {
+            background: var(--glass-hover);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: inset 0 1px 1px var(--shadow-glow),
+                        0 4px 12px var(--shadow-glow);
+        }
+
+        .cat-btn b {
+            display: block;
+            font-size: 0.9rem;
+        }
+
+        .cat-btn span {
+            font-size: 0.8rem;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.65rem;
+            background: var(--accent);
+            color: var(--bg-base);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px var(--shadow-glow);
+            border: 1px solid var(--accent);
+        }
+
+        /* NOTAS */
+        .card-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card.expanded {
+            border-color: var(--accent);
+            background: var(--glass-light);
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+            padding-bottom: 25px;
+            opacity: 1;
+            pointer-events: auto;
+            border-top-color: var(--glass-border);
+            margin-top: 10px;
+        }
+
+        .card-body {
+            max-height: 0;
+            padding: 0 20px;
+            opacity: 0;
+            pointer-events: none;
+            border-top: 1px solid transparent;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .score-badge {
+            font-size: 1.4rem;
+            font-weight: 800;
+            padding: 8px 18px;
+            border-radius: 16px;
+            background: var(--accent);
+            color: var(--bg-base);
+            box-shadow: 0 4px 15px var(--shadow-glow);
+            border: 1px solid var(--accent);
+        }
+
+        .progress-mini {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-mini-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-glow) 100%);
+            border-radius: 3px;
+            transition: width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        /* NAVIGATION */
+        nav {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            background: var(--nav-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            z-index: 100;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 26px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 90px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, var(--accent), transparent 80%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            color: var(--accent);
+        }
+
+        .nav-btn.active {
+            color: var(--accent);
+            background: var(--glass-hover);
+            border: 1.5px solid var(--accent);
+            box-shadow: 0 4px 12px var(--shadow-glow);
+        }
+
+        @media (min-width: 768px) {
+            nav {
+                width: 95%;
+                max-width: 600px;
+                padding: 20px;
+                bottom: 15px;
+            }
+
+            .nav-btn {
+                padding: 26px 16px;
+                font-size: 0.9rem;
+                min-height: 90px;
+            }
+        }
+
+        /* PDF VIEWER */
+        .pdf-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .pdf-container {
+            background: var(--glass-light);
+            backdrop-filter: blur(var(--blur-amount));
+            -webkit-backdrop-filter: blur(var(--blur-amount));
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            width: 90%;
+            height: 80%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .pdf-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--accent);
+        }
+
+        .pdf-close {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: var(--red);
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .pdf-close:hover {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: var(--red);
+        }
+
+        .pdf-body {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .pdf-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* CHARTS */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+            background: var(--glass-light);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        /* THEME TOGGLE */
+        .theme-toggle {
+            background: var(--glass-light);
+            backdrop-filter: blur(5px);
+            border: 1px solid var(--glass-border);
+            padding: 4px;
+            border-radius: 12px;
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .theme-toggle button {
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle button.active {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-glow) 100%);
+            color: #0a0e27;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-glow) 100%);
+        }
+
+        /* NUMPAD */
+        #numpad-modal {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            background: var(--nav-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 2px solid var(--glass-border);
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            padding: 20px;
+            transition: 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 2000;
+            border: 1px solid var(--glass-border);
+        }
+
+        #numpad-modal.open {
+            bottom: 0;
+        }
+
+        .num-key {
+            background: var(--glass-light);
+            backdrop-filter: blur(5px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 18px;
+            border-radius: 16px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .num-key:hover {
+            background: var(--glass-hover);
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px var(--shadow-glow);
+        }
+
+        .num-key:active {
+            transform: scale(0.95);
+        }
+
+        .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        /* PDF VIEWER - Updated */
+        #pdf-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 5000;
+            padding: 20px;
+            flex-direction: column;
+        }
+
+        .pdf-container {
+            width: 100%;
+            height: 100%;
+            background: var(--card);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        iframe {
+            width: 100%;
+            flex-grow: 1;
+            border: none;
+        }
+
+        /* OVERLAY */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 1000;
+        }
+
+        .overlay.open {
+            display: block;
+        }
+
+        /* NAVIGATION */
+        nav {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 100%;
+            background: var(--nav-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(128, 128, 128, 0.2);
+            border-radius: 25px;
+            display: flex;
+            padding: 8px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            padding: 6px 4px;
+            min-height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn.active {
+            color: var(--accent);
+        }
+
+        @media (min-width: 768px) {
+            nav {
+                width: 95%;
+                max-width: 600px;
+                padding: 10px;
+            }
+            .nav-btn {
+                font-size: 0.75rem;
+                padding: 8px 5px;
+                min-height: auto;
+            }
+        }
+
+        /* DRAWER */
+        .drawer {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--card-border);
+        }
+
+        .drawer.open {
+            display: block;
+        }
+
+        .charts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(reg => console.log('SW registrado', reg))
+        .catch(err => console.log('Error al registrar SW', err));
+    });
+  }
+</script>
+
+<body>
+
+    <div class="container">
+        <!-- ============ INICIO ============ -->
+        <section id="view-inicio" class="view active">
+            <div id="live-date">...</div>
+
+            <div class="card">
+                <h2>📅 Horario de Hoy</h2>
+                <div id="horario-hoy"></div>
+            </div>
+
+            <div class="card">
+                <h2>✅ Tareas</h2>
+                <div class="row-form">
+                    <input type="text" id="todo-input" placeholder="Añadir tarea...">
+                    <button class="btn btn-check" onclick="addTodo()">+</button>
+                </div>
+                <div id="todo-list"></div>
+            </div>
+
+            <div class="card">
+                <h2>📝 Próximos Exámenes</h2>
+                <button class="btn btn-check" style="width:100%; margin-bottom:15px" onclick="showExamForm()">+ Crear Examen</button>
+                <div id="exam-form-div" style="display:none" class="card">
+                    <div class="inline-form" style="flex-direction: column;">
+                        <input type="text" id="ex-name" placeholder="Nombre Examen">
+                        <input type="date" id="ex-date">
+                        <select id="ex-asig" onchange="loadTemasForExam()">
+                            <option value="">Selecciona Asignatura</option>
+                        </select>
+                        <div id="ex-temas-selection" style="font-size:0.8rem; color:var(--text-dim)"></div>
+                        <button class="btn btn-check" onclick="saveExam()">Confirmar</button>
+                    </div>
+                </div>
+                <div id="exam-list"></div>
+            </div>
+        </section>
+
+        <!-- ============ ASIGNATURAS ============ -->
+        <section id="view-asignaturas" class="view">
+            <h1>Asignaturas</h1>
+            <div class="card">
+                <div class="row-form">
+                    <input type="text" id="new-asig-name" placeholder="Nombre asignatura...">
+                    <button class="btn btn-check" onclick="addAsig()">Crear</button>
+                </div>
+            </div>
+            <div id="asig-container"></div>
+        </section>
+
+        <!-- ============ NOTAS ============ -->
+        <section id="view-notas" class="view">
+            <h1>Mi Progreso</h1>
+            <div id="notas-main"></div>
+        </section>
+
+        <!-- ============ GASTOS ============ -->
+        <section id="view-gastos" class="view">
+            <div class="total-header">
+                <span style="font-size:0.7rem; color:var(--text-dim); letter-spacing: 2px;">GASTO DICIEMBRE</span>
+                <span id="total-general" class="total-val">0.00€</span>
+            </div>
+
+            <div class="charts-container">
+                <div class="card">
+                    <h2>DISTRIBUCIÓN POR CATEGORÍA</h2>
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="card">
+                    <h2>HISTÓRICO MENSUAL</h2>
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <div class="cat-grid">
+                <div class="cat-btn" onclick="registerGasto('Alquiler', 125)">
+                    <div id="count-Alquiler" class="badge">x0</div>
+                    <b>🏠 Alquiler</b><span>125€</span>
+                </div>
+                <div class="cat-btn" onclick="registerGasto('Transporte', 1.1)">
+                    <div id="count-Transporte" class="badge">x0</div>
+                    <b>🚌 Transporte</b><span>1.10€</span>
+                </div>
+                <div class="cat-btn" onclick="openNumpad('Luz')">
+                    <div id="count-Luz" class="badge">x0</div>
+                    <b>⚡ Luz</b><span id="val-Luz">0.00€</span>
+                </div>
+                <div class="cat-btn" onclick="openNumpad('Agua')">
+                    <div id="count-Agua" class="badge">x0</div>
+                    <b>💧 Agua</b><span id="val-Agua">0.00€</span>
+                </div>
+                <div class="cat-btn" onclick="openNumpad('Compra')">
+                    <div id="count-Compra" class="badge">x0</div>
+                    <b>🛒 Compra</b><span id="val-Compra">0.00€</span>
+                </div>
+                <div class="cat-btn" onclick="openNumpad('Comida')">
+                    <div id="count-Comida" class="badge">x0</div>
+                    <b>🍕 Comida</b><span id="val-Comida">0.00€</span>
+                </div>
+            </div>
+
+            <h2 style="margin: 25px 0 10px 5px;">MOVIMIENTOS DEL MES</h2>
+            <div id="history-list"></div>
+
+            <button class="btn btn-action btn-outline" onclick="exportYearlyData()">📤 EXPORTAR GASTOS (CSV/EXCEL)</button>
+            <button class="btn btn-action btn-red" onclick="resetMes()">💾 CERRAR MES ACTUAL</button>
+        </section>
+
+        <!-- ============ HORARIO ============ -->
+        <section id="view-ajustes" class="view">
+            <h1>Configuración</h1>
+            
+            <div class="card">
+                <h2>📅 Horario</h2>
+                <div id="horario-config"></div>
+            </div>
+
+            <div class="card">
+                <h2>🎨 Apariencia</h2>
+                <button class="btn btn-action btn-accent" onclick="toggleTheme()">Cambiar Modo Claro / Oscuro</button>
+            </div>
+            <div class="card">
+                <h2>💾 Datos</h2>
+                <button class="btn btn-action btn-outline" onclick="exportData()">Exportar Backup (JSON)</button>
+                <button class="btn btn-action btn-outline" onclick="document.getElementById('importInput').click()">Importar Backup</button>
+                <input type="file" id="importInput" hidden onchange="importData(event)">
+                <button class="btn btn-action btn-red" onclick="fullReset()">Borrar Todo</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- PDF OVERLAY -->
+    <div id="pdf-overlay">
+        <div class="pdf-container">
+            <div style="padding:15px; display:flex; justify-content:space-between; background:#111">
+                <span id="pdf-title" style="font-weight: bold; color: var(--accent);">Documento</span>
+                <button onclick="closePdf()" style="color:var(--red); background:none; border:none; font-weight:bold">X</button>
+            </div>
+            <iframe id="pdf-iframe"></iframe>
+        </div>
+    </div>
+
+    <!-- NUMPAD MODAL -->
+    <div id="overlay" class="overlay" onclick="closeNumpad()"></div>
+    <div id="numpad-modal">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+            <span id="numpad-title" style="font-weight:bold; color:var(--accent)">CATEGORÍA</span>
+            <div id="numpad-val" style="font-size:2rem; font-weight:900">0€</div>
+        </div>
+        <div class="numpad-grid">
+            <button class="num-key" onclick="pressKey('7')">7</button>
+            <button class="num-key" onclick="pressKey('8')">8</button>
+            <button class="num-key" onclick="pressKey('9')">9</button>
+            <button class="num-key" onclick="pressKey('4')">4</button>
+            <button class="num-key" onclick="pressKey('5')">5</button>
+            <button class="num-key" onclick="pressKey('6')">6</button>
+            <button class="num-key" onclick="pressKey('1')">1</button>
+            <button class="num-key" onclick="pressKey('2')">2</button>
+            <button class="num-key" onclick="pressKey('3')">3</button>
+            <button class="num-key" onclick="pressKey('.')">.</button>
+            <button class="num-key" onclick="pressKey('0')">0</button>
+            <button class="num-key" style="background:var(--red)" onclick="pressKey('C')">⌫</button>
+            <button class="num-key" style="grid-column: span 3; background:var(--accent); color:var(--bg-base); margin-top:10px" onclick="confirmNumpad()">GUARDAR GASTO</button>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav>
+        <button class="nav-btn active" onclick="showView('inicio')">🏠<br>INICIO</button>
+        <button class="nav-btn" onclick="showView('asignaturas')">📖<br>ASIGNATURAS</button>
+        <button class="nav-btn" onclick="showView('notas')">📊<br>NOTAS</button>
+        <button class="nav-btn" onclick="showView('gastos')">💵<br>GASTOS</button>
+        <button class="nav-btn" onclick="showView('ajustes')">⚙️<br>CONFIG</button>
+    </nav>
+
+    <script>
+        // ============ DATOS GLOBALES ============
+        let data = JSON.parse(localStorage.getItem('crystal_pro_unified')) || {
+            asignaturas: [],
+            todos: [],
+            exams: [],
+            horario: { "lunes": [], "martes": [], "miércoles": [], "jueves": [], "viernes": [] },
+            notas: { asigs: [] },
+            config: { theme: 'dark' }
+        };
+
+        let gastos = JSON.parse(localStorage.getItem('gastos_unified')) || {
+            movimientos: [],
+            historial: []
+        };
+
+        const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        const todayStr = new Date().toDateString();
+
+        // ============ FUNCIONES DE GUARDADO ============
+        function saveData() {
+            localStorage.setItem('crystal_pro_unified', JSON.stringify(data));
+        }
+
+        function saveGastos() {
+            localStorage.setItem('gastos_unified', JSON.stringify(gastos));
+        }
+
+        // ============ NAVEGACIÓN ============
+        function showView(v) {
+            document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+            document.getElementById('view-' + v).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event?.currentTarget?.classList.add('active');
+
+            if (v === 'inicio') renderInicio();
+            if (v === 'asignaturas') renderAsignaturas();
+            if (v === 'notas') renderNotas();
+            if (v === 'gastos') {
+                renderGastos();
+                setTimeout(() => {
+                    if (document.getElementById('pieChart')) updateCharts();
+                }, 100);
+            }
+            if (v === 'ajustes') renderHorarioConfig();
+        }
+
+        // ============ TAREAS ============
+        function addTodo() {
+            const val = document.getElementById('todo-input').value;
+            if (val) {
+                data.todos.push({ id: Date.now(), text: val, done: false, date: todayStr });
+                document.getElementById('todo-input').value = '';
+                saveData();
+                renderInicio();
+            }
+        }
+
+        function toggleTodo(id) {
+            let t = data.todos.find(x => x.id === id);
+            t.done = !t.done;
+            saveData();
+            renderInicio();
+        }
+
+        // ============ EXÁMENES ============
+        function showExamForm() {
+            const div = document.getElementById('exam-form-div');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+            const sel = document.getElementById('ex-asig');
+            sel.innerHTML = '<option value="">Selecciona Asignatura</option>' +
+                data.asignaturas.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        }
+
+        function loadTemasForExam() {
+            const asigId = document.getElementById('ex-asig').value;
+            const asig = data.asignaturas.find(a => a.id == asigId);
+            const container = document.getElementById('ex-temas-selection');
+            if (asig) {
+                container.innerHTML = 'Selecciona temas:<br>' + asig.temas.map(t => `
+                    <label><input type="checkbox" value="${t.id}" class="ex-tema-cb"> ${t.name}</label>
+                `).join('<br>');
+            }
+        }
+
+        function saveExam() {
+            const name = document.getElementById('ex-name').value;
+            const date = document.getElementById('ex-date').value;
+            const asigId = document.getElementById('ex-asig').value;
+            const selectedTemas = Array.from(document.querySelectorAll('.ex-tema-cb:checked')).map(cb => cb.value);
+
+            if (name && date && asigId) {
+                data.exams.push({ id: Date.now(), name, date, asigId, temas: selectedTemas });
+                saveData();
+                document.getElementById('exam-form-div').style.display = 'none';
+                renderInicio();
+            }
+        }
+
+        // ============ INICIO ============
+        function renderInicio() {
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            // Limpieza
+            data.todos = data.todos.filter(t => !t.done || t.date === todayStr);
+            data.exams = data.exams.filter(ex => {
+                const fechaExamen = new Date(ex.date);
+                fechaExamen.setHours(0, 0, 0, 0);
+                return fechaExamen >= hoy;
+            });
+            saveData();
+
+            // Render Tareas
+            document.getElementById('todo-list').innerHTML = data.todos.map(t => `
+                <div class="item-row ${t.done ? 'done' : ''}" onclick="toggleTodo(${t.id})">
+                    <span>${t.done ? '✅' : '⭕'} ${t.text}</span>
+                </div>
+            `).join('');
+
+            // Render Exámenes
+            const exList = document.getElementById('exam-list');
+            const sortedExams = data.exams.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (sortedExams.length === 0) {
+                exList.innerHTML = '<div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">No hay exámenes próximos</div>';
+            } else {
+                exList.innerHTML = sortedExams.map(ex => {
+                    const diff = Math.ceil((new Date(ex.date) - hoy) / (1000 * 60 * 60 * 24));
+                    const asig = data.asignaturas.find(a => a.id == ex.asigId);
+                    return `
+                        <div class="item-row exam-card" onclick="toggleExamFiles(${ex.id})">
+                            <div>
+                                <div style="font-weight:bold">${ex.name}</div>
+                                <div style="font-size:0.7rem; color:var(--accent)">${asig ? asig.name : 'Asignatura borrada'} - ${ex.date}</div>
+                            </div>
+                            <span class="days-left">${diff === 0 ? 'HOY' : 'Faltan ' + diff + 'd'}</span>
+                        </div>
+                        <div id="ex-files-${ex.id}" class="sub-section" style="display:none"></div>
+                    `;
+                }).join('');
+            }
+
+            // Render Horario de Hoy
+            const ahora = new Date();
+            const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+            const hoyDia = dias[ahora.getDay()];
+            const hContainer = document.getElementById('horario-hoy');
+
+            if (hoyDia === "sábado" || hoyDia === "domingo") {
+                hContainer.innerHTML = "<p style='color:var(--text-dim)'>Fin de semana libre ✨</p>";
+            } else {
+                const clases = data.horario[hoyDia] || [];
+                hContainer.innerHTML = clases.length ? clases.map(c => `
+                    <div class="schedule-item ${c.type}">
+                        <div class="time-box">${c.start} - ${c.end}</div>
+                        <div class="subject-box">${c.name}</div>
+                    </div>
+                `).join('') : "<p style='color:var(--text-dim)'>No hay clases hoy.</p>";
+            }
+
+            // Actualiza fecha
+            document.getElementById('live-date').innerText = ahora.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        function toggleExamFiles(exId) {
+            const div = document.getElementById(`ex-files-${exId}`);
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+            if (div.style.display === 'block') {
+                const ex = data.exams.find(e => e.id === exId);
+                const asig = data.asignaturas.find(a => a.id == ex.asigId);
+                let html = '<strong>Recursos de estudio:</strong><br>';
+                ex.temas.forEach(tid => {
+                    const tema = asig.temas.find(t => t.id == tid);
+                    if (tema) {
+                        tema.files.forEach(f => {
+                            html += `<div style="margin:5px 0; font-size:0.8rem; color:var(--accent); cursor:pointer" onclick="openPdf('${f.name}','${f.content}')">📄 ${f.name} (Tema: ${tema.name})</div>`;
+                        });
+                    }
+                });
+                div.innerHTML = html;
+            }
+        }
+
+        // ============ ASIGNATURAS ============
+        function addAsig() {
+            console.log('addAsig() called');
+            const input = document.getElementById('new-asig-name');
+            if (!input) {
+                console.error('Input no encontrado: new-asig-name');
+                alert('Error: Input no encontrado');
+                return;
+            }
+            
+            const n = input.value.trim();
+            console.log('Valor del input:', n);
+            
+            if (!n || n.length === 0) {
+                alert('Por favor, introduce un nombre para la asignatura');
+                return;
+            }
+            
+            const newAsig = { id: Date.now(), name: n, temas: [] };
+            console.log('Nueva asignatura:', newAsig);
+            
+            data.asignaturas.push(newAsig);
+            data.notas.asigs.push({ id: newAsig.id, name: n, secciones: [] });
+            
+            console.log('Total asignaturas:', data.asignaturas.length);
+            console.log('Total notas asigs:', data.notas.asigs.length);
+            
+            input.value = '';
+            saveData();
+            renderAsignaturas();
+        }
+
+        function renderAsignaturas() {
+            console.log('renderAsignaturas() called, total:', data.asignaturas.length);
+            const container = document.getElementById('asig-container');
+            
+            if (!container) {
+                console.error('Contenedor asig-container no encontrado');
+                return;
+            }
+            
+            if (!data.asignaturas || data.asignaturas.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">Sin asignaturas. Crea una nueva.</div>';
+                return;
+            }
+            
+            container.innerHTML = data.asignaturas.map(a => `
+                <div class="card" id="asig-${a.id}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <strong style="color: var(--accent); font-size: 1.1rem;">${a.name}</strong>
+                        <button onclick="deleteAsig(${a.id})" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 1.3rem; padding: 0;">🗑️</button>
+                    </div>
+                    <div id="tema-form-${a.id}" style="margin-bottom: 15px;">
+                        <div class="inline-form">
+                            <input type="text" id="t-in-${a.id}" placeholder="Nombre del tema..." style="margin-bottom: 8px;">
+                            <button class="btn btn-check" style="width: 100%; margin-bottom: 8px;" onclick="addTema(${a.id})">+ Añadir Tema</button>
+                        </div>
+                    </div>
+                    <div id="t-list-${a.id}"></div>
+                </div>
+            `).join('');
+            
+            console.log('Renderizando temas...');
+            setTimeout(() => {
+                data.asignaturas.forEach(a => {
+                    console.log('Renderizando temas para asignatura:', a.id);
+                    renderTemas(a.id);
+                });
+            }, 10);
+        }
+
+        function deleteAsig(id) {
+            console.log('deleteAsig() called with id:', id);
+            if (!confirm("¿Borrar asignatura? Se eliminarán todos sus temas y datos de notas.")) {
+                return;
+            }
+            
+            data.asignaturas = data.asignaturas.filter(a => a.id !== id);
+            data.notas.asigs = data.notas.asigs.filter(a => a.id !== id);
+            
+            console.log('Asignatura borrada. Total:', data.asignaturas.length);
+            saveData();
+            renderAsignaturas();
+        }
+
+        function addTema(aid) {
+            console.log('addTema() called for asig:', aid);
+            const input = document.getElementById('t-in-' + aid);
+            
+            if (!input) {
+                console.error('Input tema no encontrado para asig:', aid);
+                alert('Error: No se puede encontrar el campo de tema');
+                return;
+            }
+            
+            const v = input.value.trim();
+            console.log('Tema nombre:', v);
+            
+            if (!v || v.length === 0) {
+                alert('Por favor, introduce un nombre para el tema');
+                return;
+            }
+            
+            const asig = data.asignaturas.find(x => x.id == aid);
+            if (!asig) {
+                console.error('Asignatura no encontrada:', aid);
+                alert('Error: Asignatura no encontrada');
+                return;
+            }
+            
+            asig.temas.push({ id: Date.now(), name: v, files: [] });
+            console.log('Tema añadido. Total temas:', asig.temas.length);
+            
+            input.value = '';
+            saveData();
+            renderTemas(aid);
+        }
+
+        function renderTemas(aid) {
+            console.log('renderTemas() called for asig:', aid);
+            const asig = data.asignaturas.find(x => x.id == aid);
+            
+            if (!asig) {
+                console.error('Asignatura no encontrada:', aid);
+                return;
+            }
+            
+            const container = document.getElementById('t-list-' + aid);
+            if (!container) {
+                console.error('Contenedor temas no encontrado:', 't-list-' + aid);
+                return;
+            }
+            
+            console.log('Total temas:', asig.temas.length);
+            
+            if (!asig.temas || asig.temas.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = asig.temas.map(t => `
+                <div style="font-size: 0.9rem; margin: 10px 0; padding: 12px; border-left: 3px solid var(--accent); background: rgba(188,140,255,0.08); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="color: var(--accent);">📁 ${t.name}</strong>
+                        <button onclick="deleteTema(${aid}, ${t.id})" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 1.1rem; padding: 0;">🗑️</button>
+                    </div>
+                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 10px; background: rgba(255,255,255,0.08); padding: 10px; border-radius: 8px;">
+                        <span>📄 Subir PDF</span>
+                        <input type="file" id="file-input-${aid}-${t.id}" accept=".pdf" onchange="addFile(event, ${aid}, ${t.id})" style="cursor: pointer; display: none;">
+                    </label>
+                    <div id="files-list-${t.id}" style="margin-top: 8px;"></div>
+                </div>
+            `).join('');
+            
+            console.log('Renderizando archivos...');
+            setTimeout(() => {
+                asig.temas.forEach(t => {
+                    console.log('Renderizando archivos para tema:', t.id);
+                    renderFiles(aid, t.id);
+                });
+            }, 10);
+        }
+
+        function deleteTema(aid, tid) {
+            console.log('deleteTema() called for asig:', aid, 'tema:', tid);
+            if (!confirm("¿Borrar tema?")) {
+                return;
+            }
+            
+            const asig = data.asignaturas.find(x => x.id == aid);
+            if (!asig) return;
+            
+            asig.temas = asig.temas.filter(t => t.id !== tid);
+            console.log('Tema borrado. Total temas:', asig.temas.length);
+            
+            saveData();
+            renderTemas(aid);
+        }
+
+        function addFile(e, aid, tid) {
+            console.log('addFile() called for asig:', aid, 'tema:', tid);
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const f = e.target.files[0];
+            if (!f) {
+                console.log('No file selected');
+                return;
+            }
+            
+            console.log('Iniciando lectura de archivo:', f.name, 'Size:', f.size);
+            
+            const reader = new FileReader();
+            
+            reader.onload = (ev) => {
+                console.log('Archivo leído correctamente:', f.name);
+                
+                const asig = data.asignaturas.find(x => x.id == aid);
+                if (!asig) {
+                    console.error('Asignatura no encontrada:', aid);
+                    alert('❌ Asignatura no encontrada');
+                    return;
+                }
+                
+                const tema = asig.temas.find(x => x.id == tid);
+                if (!tema) {
+                    console.error('Tema no encontrado:', tid);
+                    alert('❌ Tema no encontrado');
+                    return;
+                }
+                
+                const fileObj = { id: Date.now(), name: f.name, content: ev.target.result };
+                tema.files.push(fileObj);
+                
+                console.log('Archivo guardado. Total archivos en tema:', tema.files.length);
+                console.log('Contenido del archivo guardado:', fileObj.content.substring(0, 50) + '...');
+                
+                saveData();
+                renderFiles(aid, tid);
+                alert('✅ Archivo subido: ' + f.name);
+                
+                e.target.value = '';
+            };
+            
+            reader.onerror = (error) => {
+                console.error('Error al leer archivo:', error);
+                alert('❌ Error al leer el archivo');
+            };
+            
+            reader.readAsDataURL(f);
+        }
+
+        function renderFiles(aid, tid) {
+            console.log('renderFiles() called for asig:', aid, 'tema:', tid);
+            
+            const asig = data.asignaturas.find(a => a.id === aid);
+            if (!asig) {
+                console.error('Asignatura no encontrada en renderFiles:', aid);
+                return;
+            }
+            
+            const tema = asig.temas.find(t => t.id === tid);
+            if (!tema) {
+                console.error('Tema no encontrado en renderFiles:', tid);
+                return;
+            }
+            
+            const container = document.getElementById(`files-list-${tid}`);
+            if (!container) {
+                console.error('Contenedor de archivos no encontrado:', `files-list-${tid}`);
+                return;
+            }
+            
+            console.log('Renderizando archivos para tema:', tid, 'Total:', tema.files.length);
+            
+            if (!tema.files || tema.files.length === 0) {
+                container.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 5px; font-style: italic;">Sin archivos cargados</div>';
+                return;
+            }
+            
+            container.innerHTML = tema.files.map((f, idx) => `
+                <div style="background: rgba(255,255,255,0.08); border: none; border-bottom:1px solid #333; margin: 5px 0; padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer;" onclick="openPdf('${f.name.replace(/'/g, "\\'")}', '${f.content}')">
+                        <span style="color: var(--accent);">📄</span>
+                        <span style="color: var(--accent); font-size: 0.85rem;">${f.name}</span>
+                    </div>
+                    <button style="background: none; border: none; color: var(--red); cursor: pointer; padding: 0; font-size: 1rem;" onclick="deleteFile(${aid}, ${tid}, ${f.id})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteFile(aid, tid, fid) {
+            console.log('deleteFile() called for asig:', aid, 'tema:', tid, 'file:', fid);
+            
+            if (!confirm('¿Borrar este archivo?')) {
+                return;
+            }
+            
+            const asig = data.asignaturas.find(a => a.id === aid);
+            if (!asig) return;
+            
+            const tema = asig.temas.find(t => t.id === tid);
+            if (!tema) return;
+            
+            tema.files = tema.files.filter(f => f.id !== fid);
+            console.log('Archivo borrado. Total archivos:', tema.files.length);
+            
+            saveData();
+            renderFiles(aid, tid);
+        }
+
+        function deleteAsig(id) {
+            if (confirm("¿Borrar asignatura? Se eliminarán todos sus temas y datos de notas.")) {
+                data.asignaturas = data.asignaturas.filter(a => a.id !== id);
+                data.notas.asigs = data.notas.asigs.filter(a => a.id !== id);
+                saveData();
+                renderAsignaturas();
+                renderNotas();
+            }
+        }
+
+        function addTema(aid) {
+            const input = document.getElementById('t-in-' + aid);
+            if (!input) {
+                console.error('No se encontró el input para tema de asignatura:', aid);
+                return;
+            }
+            const v = input.value.trim();
+            if (v.length === 0) {
+                alert('Por favor, introduce un nombre para el tema');
+                return;
+            }
+            const asig = data.asignaturas.find(x => x.id == aid);
+            if (!asig) {
+                console.error('No se encontró la asignatura:', aid);
+                return;
+            }
+            asig.temas.push({ id: Date.now(), name: v, files: [] });
+            input.value = '';
+            saveData();
+            renderTemas(aid);
+        }
+
+        function renderTemas(aid) {
+            const asig = data.asignaturas.find(x => x.id == aid);
+            const container = document.getElementById('t-list-' + aid);
+            
+            if (!asig) {
+                console.error('Asignatura no encontrada:', aid);
+                return;
+            }
+            
+            if (!container) {
+                console.error('Contenedor de temas no encontrado para:', aid);
+                return;
+            }
+            
+            if (!asig.temas || asig.temas.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = asig.temas.map(t => `
+                <div style="font-size:0.85rem; margin:10px 0; padding:10px; border-left:2px solid var(--accent); background: rgba(188,140,255,0.05); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="color: var(--accent);">📁 ${t.name}</strong>
+                        <button onclick="deleteTema(${aid}, ${t.id})" style="background:none; border:none; color:var(--red); cursor: pointer; font-size: 1.2rem; padding: 0;">🗑️</button>
+                    </div>
+                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
+                        📄 Subir PDF
+                        <input type="file" id="file-input-${aid}-${t.id}" accept=".pdf" onchange="addFile(event, ${aid}, ${t.id})" style="cursor: pointer; display: none;">
+                    </label>
+                    <div id="files-list-${t.id}" style="margin-top: 8px;"></div>
+                </div>
+            `).join('');
+            
+            // Renderizar archivos después de que los elementos estén en el DOM
+            setTimeout(() => {
+                asig.temas.forEach(t => renderFiles(aid, t.id));
+            }, 0);
+        }
+
+        function deleteTema(aid, tid) {
+            if (confirm("¿Borrar tema?")) {
+                const asig = data.asignaturas.find(x => x.id == aid);
+                asig.temas = asig.temas.filter(t => t.id !== tid);
+                saveData();
+                renderTemas(aid);
+            }
+        }
+
+        function addFile(e, aid, tid) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const f = e.target.files[0];
+            if (!f) {
+                console.log('No file selected');
+                return;
+            }
+            
+            console.log('Iniciando lectura de archivo:', f.name);
+            
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                console.log('Archivo leído:', f.name);
+                const asig = data.asignaturas.find(x => x.id == aid);
+                if (!asig) {
+                    console.error('Asignatura no encontrada:', aid);
+                    return;
+                }
+                const tema = asig.temas.find(x => x.id == tid);
+                if (!tema) {
+                    console.error('Tema no encontrado:', tid);
+                    return;
+                }
+                
+                const fileObj = { id: Date.now(), name: f.name, content: ev.target.result };
+                tema.files.push(fileObj);
+                console.log('Archivo guardado. Total archivos:', tema.files.length);
+                
+                saveData();
+                renderFiles(aid, tid);
+                alert('✅ Archivo subido: ' + f.name);
+                
+                // Limpiar el input
+                e.target.value = '';
+            };
+            
+            reader.onerror = (error) => {
+                console.error('Error al leer archivo:', error);
+                alert('❌ Error al leer el archivo');
+            };
+            
+            reader.readAsDataURL(f);
+        }
+
+        function renderFiles(aid, tid) {
+            const asig = data.asignaturas.find(a => a.id === aid);
+            if (!asig) {
+                console.error('Asignatura no encontrada en renderFiles:', aid);
+                return;
+            }
+            
+            const tema = asig.temas.find(t => t.id === tid);
+            if (!tema) {
+                console.error('Tema no encontrado en renderFiles:', tid);
+                return;
+            }
+            
+            const container = document.getElementById(`files-list-${tid}`);
+            if (!container) {
+                console.error('Contenedor de archivos no encontrado:', `files-list-${tid}`);
+                return;
+            }
+            
+            console.log('Renderizando archivos para tema:', tid, 'Total:', tema.files.length);
+            
+            if (!tema.files || tema.files.length === 0) {
+                container.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 5px; font-style: italic;">Sin archivos cargados</div>';
+                return;
+            }
+            
+            container.innerHTML = tema.files.map((f, idx) => `
+                <div class="item-row" style="background: rgba(255,255,255,0.08); border: none; border-bottom:1px solid #333; margin-top: 5px; font-size: 0.8rem; padding: 8px 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer;" onclick="openPdf('${f.name.replace(/'/g, "\\'")}', '${f.content}')">
+                        <span style="color: var(--accent);">📄</span>
+                        <span style="color: var(--accent);">${f.name}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteFile(${aid}, ${tid}, ${f.id})" style="cursor: pointer; background: none; border: none; color: var(--red);">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteFile(aid, tid, fid) {
+            const asig = data.asignaturas.find(a => a.id === aid);
+            if (!asig) return;
+            const tema = asig.temas.find(t => t.id === tid);
+            if (!tema) return;
+            
+            if (confirm('¿Borrar este archivo?')) {
+                tema.files = tema.files.filter(f => f.id !== fid);
+                saveData();
+                renderFiles(aid, tid);
+            }
+        }
+
+        // ============ NOTAS ============
+        let expandedId = null;
+
+        function renderNotas() {
+            const container = document.getElementById('notas-main');
+            if (data.notas.asigs.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-dim); margin-top:40px">No hay datos. Añade asignaturas en la sección Asignaturas.</div>';
+                return;
+            }
+
+            container.innerHTML = data.notas.asigs.map(asig => {
+                const final = calcularFinal(asig);
+                const pesoTotal = asig.secciones.reduce((acc, s) => acc + s.peso, 0);
+                const colorNota = final >= 5 ? (final >= 7 ? 'var(--accent)' : 'var(--yellow)') : 'var(--red)';
+                const isExpanded = expandedId === asig.id;
+
+                return `
+                    <div class="card ${isExpanded ? 'expanded' : ''}" onclick="if(!event.target.closest('button') && !event.target.closest('input')) toggleExpandNote(${asig.id})">
+                        <div class="card-header">
+                            <div style="flex:1">
+                                <div style="font-size:1.1rem; font-weight:700;">${asig.name}</div>
+                                <div class="progress-mini">
+                                    <div class="progress-fill" style="width:${pesoTotal}%; background:${pesoTotal === 100 ? 'var(--green)' : 'var(--accent)'}"></div>
+                                </div>
+                            </div>
+                            <div class="score-badge" style="color:${colorNota}">${final.toFixed(1)}</div>
+                        </div>
+
+                        <div class="card-body">
+                            ${asig.secciones.map((sec, sIdx) => {
+                    const prom = calcularPromedioSeccion(sec);
+                    return `
+                                <div class="section-box">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                                        <span style="font-size:0.7rem; font-weight:bold; color:var(--text-dim)">${sec.nombre} (${sec.peso}%)</span>
+                                        <span style="font-weight:bold; color:${prom < 5 ? 'var(--red)' : 'var(--accent)'}">Media: ${prom.toFixed(2)}</span>
+                                    </div>
+                                    ${sec.items.map(it => `
+                                        <div class="item-row" style="background: rgba(255,255,255,0.05); border: none; cursor: default;">
+                                            <span>${it.nombre}</span>
+                                            <span style="font-weight:bold; color:${it.nota < 5 ? 'var(--red)' : 'var(--text-main)'}">${it.nota.toFixed(1)}</span>
+                                        </div>
+                                    `).join('')}
+                                    <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap">
+                                        <input type="text" id="it-n-${asig.id}-${sIdx}" placeholder="Nombre" style="flex:2; min-width:120px">
+                                        <input type="number" id="it-v-${asig.id}-${sIdx}" placeholder="Nota" style="flex:1; min-width:70px">
+                                        <button class="btn btn-check" onclick="addItemNota(${asig.id}, ${sIdx})">+</button>
+                                    </div>
+                                    <button onclick="delSecNota(${asig.id}, ${sIdx})" style="width:100%; background:none; border:none; color:var(--red); font-size:0.6rem; margin-top:10px">ELIMINAR SECCIÓN</button>
+                                </div>
+                            `;
+                }).join('')}
+
+                            ${pesoTotal < 100 ? `
+                                <div style="margin-top:15px; padding:15px; border:1px dashed var(--card-border); border-radius:15px">
+                                    <div style="font-size:0.7rem; font-weight:bold; margin-bottom:8px">NUEVA SECCIÓN (${100 - pesoTotal}% libre)</div>
+                                    <div style="display:flex; gap:5px; flex-wrap:wrap">
+                                        <input type="text" id="n-sec-${asig.id}" placeholder="Ej: Examen" style="flex:2; min-width:120px">
+                                        <input type="number" id="p-sec-${asig.id}" placeholder="%" style="flex:1; min-width:70px">
+                                        <button class="btn btn-check" onclick="addSecNota(${asig.id}, ${100 - pesoTotal})">OK</button>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleExpandNote(id) {
+            expandedId = (expandedId === id) ? null : id;
+            renderNotas();
+        }
+
+        function addSecNota(id, max) {
+            const n = document.getElementById(`n-sec-${id}`).value;
+            const p = parseFloat(document.getElementById(`p-sec-${id}`).value);
+            if (n && p > 0 && p <= max) {
+                data.notas.asigs.find(a => a.id === id).secciones.push({ nombre: n, peso: p, items: [] });
+                saveData();
+                renderNotas();
+            }
+        }
+
+        function addItemNota(asigId, sIdx) {
+            const n = document.getElementById(`it-n-${asigId}-${sIdx}`).value;
+            const v = parseFloat(document.getElementById(`it-v-${asigId}-${sIdx}`).value);
+            if (n && !isNaN(v)) {
+                data.notas.asigs.find(a => a.id === asigId).secciones[sIdx].items.push({ nombre: n, nota: v });
+                saveData();
+                renderNotas();
+            }
+        }
+
+        function delSecNota(asigId, sIdx) {
+            data.notas.asigs.find(a => a.id === asigId).secciones.splice(sIdx, 1);
+            saveData();
+            renderNotas();
+        }
+
+        function calcularPromedioSeccion(sec) {
+            return sec.items.length ? sec.items.reduce((a, b) => a + b.nota, 0) / sec.items.length : 0;
+        }
+
+        function calcularFinal(asig) {
+            return asig.secciones.reduce((acc, sec) => acc + (calcularPromedioSeccion(sec) * (sec.peso / 100)), 0);
+        }
+
+        // ============ GASTOS ============
+        let activeCat = "", currentInput = "0", pieChart, barChart;
+
+        function registerGasto(cat, cant) {
+            gastos.movimientos.unshift({
+                id: Date.now(),
+                cat: cat,
+                monto: cant,
+                fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })
+            });
+            saveGastos();
+            renderGastos();
+        }
+
+        function deleteGasto(id) {
+            gastos.movimientos = gastos.movimientos.filter(g => g.id !== id);
+            saveGastos();
+            renderGastos();
+        }
+
+        function openNumpad(cat) {
+            activeCat = cat;
+            currentInput = "0";
+            document.getElementById('numpad-title').innerText = cat.toUpperCase();
+            document.getElementById('numpad-val').innerText = "0€";
+            document.getElementById('numpad-modal').classList.add('open');
+            document.getElementById('overlay').classList.add('open');
+        }
+
+        function closeNumpad() {
+            document.getElementById('numpad-modal').classList.remove('open');
+            document.getElementById('overlay').classList.remove('open');
+        }
+
+        function pressKey(key) {
+            if (key === 'C') currentInput = currentInput.length > 1 ? currentInput.slice(0, -1) : "0";
+            else if (key === '.') { if (!currentInput.includes('.')) currentInput += "."; }
+            else currentInput = currentInput === "0" ? key : currentInput + key;
+            document.getElementById('numpad-val').innerText = currentInput + "€";
+        }
+
+        function confirmNumpad() {
+            const val = parseFloat(currentInput);
+            if (val > 0) registerGasto(activeCat, val);
+            closeNumpad();
+        }
+
+        function resetMes() {
+            if (confirm("¿Cerrar el mes? Los datos se guardarán en el histórico y se limpiará el actual.")) {
+                const total = gastos.movimientos.reduce((a, b) => a + b.monto, 0);
+                gastos.historial.push({ mes: meses[new Date().getMonth()], total: total });
+                gastos.movimientos = [];
+                saveGastos();
+                renderGastos();
+            }
+        }
+
+        function exportYearlyData() {
+            let csv = "Fecha,Categoria,Importe\n";
+            gastos.movimientos.forEach(g => {
+                csv += `${g.fecha},${g.cat},${g.monto}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Gastos_${new Date().getFullYear()}.csv`);
+            a.click();
+        }
+
+        function renderGastos() {
+            const totals = { Alquiler: 0, Transporte: 0, Luz: 0, Agua: 0, Compra: 0, Comida: 0 };
+            const counts = { Alquiler: 0, Transporte: 0, Luz: 0, Agua: 0, Compra: 0, Comida: 0 };
+            let general = 0;
+
+            gastos.movimientos.forEach(g => {
+                if (totals.hasOwnProperty(g.cat)) {
+                    totals[g.cat] += g.monto;
+                    counts[g.cat]++;
+                    general += g.monto;
+                }
+            });
+
+            document.getElementById('total-general').innerText = general.toFixed(2) + "€";
+            for (let cat in totals) {
+                const valEl = document.getElementById(`val-${cat}`);
+                if (valEl) valEl.innerText = totals[cat].toFixed(2) + "€";
+                document.getElementById(`count-${cat}`).innerText = "x" + counts[cat];
+            }
+
+            document.getElementById('history-list').innerHTML = gastos.movimientos.map(g => `
+                <div class="item-row">
+                    <div style="flex:1"><b>${g.cat}</b> <small style="opacity:0.5">${g.fecha}</small></div>
+                    <div style="font-weight:bold; margin-right:15px">${g.monto.toFixed(2)}€</div>
+                    <button style="background:none; border:none; color:var(--red); font-size:1.2rem; cursor: pointer;" onclick="deleteGasto(${g.id})">✕</button>
+                </div>
+            `).join('') || '<center style="color:var(--text-dim); padding:20px;">Sin gastos este mes</center>';
+
+            updateCharts(totals, general);
+        }
+
+        function updateCharts(totals, actual) {
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+
+            if (pieChart) pieChart.destroy();
+            if (barChart) barChart.destroy();
+
+            pieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(totals),
+                    datasets: [{
+                        data: Object.values(totals),
+                        backgroundColor: ['#bc8cff', '#388bfd', '#3fb950', '#ff9f43', '#00d2d3', '#ff5252'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { display: true, position: 'right', labels: { color: '#8b949e', font: { size: 10 } } }
+                    },
+                    cutout: '60%'
+                }
+            });
+
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: [...gastos.historial.map(h => h.mes), "ACTUAL"],
+                    datasets: [{
+                        label: 'Gasto por Mes',
+                        data: [...gastos.historial.map(h => h.total), actual],
+                        backgroundColor: '#bc8cff',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { grid: { color: '#2d333b' }, ticks: { color: '#8b949e' } },
+                        x: { ticks: { color: '#8b949e' } }
+                    },
+                    plugins: { legend: { labels: { color: '#8b949e' } } }
+                }
+            });
+        }
+
+        // ============ HORARIO ============
+        function renderHorarioConfig() {
+            const container = document.getElementById('horario-config');
+            container.innerHTML = Object.keys(data.horario).map(dia => `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <span style="font-weight:900; color:var(--accent); text-transform:uppercase; font-size: 1rem;">${dia}</span>
+                        <button class="btn btn-outline" style="width:auto; margin:0; padding:8px 15px; font-size: 0.75rem;" onclick="toggleDrawer('${dia}')">+ Añadir clase</button>
+                    </div>
+
+                    <div id="drawer-${dia}" class="drawer">
+                        <div style="display:flex; gap:8px; margin-bottom: 12px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.7rem; color: var(--text-dim); display: block; margin-bottom: 4px;">INICIO</label>
+                                <input type="time" id="in-${dia}" style="width: 100%;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.7rem; color: var(--text-dim); display: block; margin-bottom: 4px;">FIN</label>
+                                <input type="time" id="out-${dia}" style="width: 100%;">
+                            </div>
+                        </div>
+                        <input type="text" id="name-${dia}" placeholder="Nombre de la clase..." style="margin-bottom: 12px;">
+                        <select id="type-${dia}" style="margin-bottom: 12px;">
+                            <option value="clase">📚 Teoría</option>
+                            <option value="practica">🧪 Práctica</option>
+                        </select>
+                        <button class="btn btn-accent" style="width: 100%; margin-bottom: 10px;" onclick="addItemHorario('${dia}')">Guardar Clase</button>
+                    </div>
+
+                    <div id="list-${dia}" style="margin-top:15px">
+                        ${data.horario[dia].length > 0 ? data.horario[dia].map((item, idx) => `
+                            <div class="schedule-item ${item.type}">
+                                <div class="time-box">${item.start} - ${item.end}</div>
+                                <div class="subject-box">${item.name}</div>
+                                <button onclick="removeItemHorario('${dia}', ${idx})" style="background:none; border:none; color:var(--red); cursor: pointer; padding: 0; font-size: 1.1rem;">✕</button>
+                            </div>
+                        `).join('') : '<div style="color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 15px;">Sin clases programadas</div>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleDrawer(dia) {
+            document.getElementById(`drawer-${dia}`).classList.toggle('open');
+        }
+
+        function addItemHorario(dia) {
+            const start = document.getElementById(`in-${dia}`).value;
+            const end = document.getElementById(`out-${dia}`).value;
+            const name = document.getElementById(`name-${dia}`).value;
+            const type = document.getElementById(`type-${dia}`).value;
+
+            if (start && end && name) {
+                data.horario[dia].push({ start: start, end: end, name: name, type: type });
+                data.horario[dia].sort((a, b) => {
+                    if (a.start < b.start) return -1;
+                    if (a.start > b.start) return 1;
+                    return 0;
+                });
+
+                saveData();
+                renderHorarioConfig();
+
+                document.getElementById(`in-${dia}`).value = "";
+                document.getElementById(`out-${dia}`).value = "";
+                document.getElementById(`name-${dia}`).value = "";
+                toggleDrawer(dia);
+            } else {
+                alert("Por favor, rellena todos los campos");
+            }
+        }
+
+        function removeItemHorario(dia, idx) {
+            data.horario[dia].splice(idx, 1);
+            saveData();
+            renderHorarioConfig();
+        }
+
+        // ============ AJUSTES ============
+        function toggleTheme() {
+            data.config.theme = data.config.theme === 'dark' ? 'light' : 'dark';
+            applyTheme();
+            saveData();
+        }
+
+        function applyTheme() {
+            if (data.config.theme === 'light') document.body.classList.add('light-mode');
+            else document.body.classList.remove('light-mode');
+        }
+
+        function exportData() {
+            const fullData = { ...data, gastos: gastos };
+            const blob = new Blob([JSON.stringify(fullData)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `crystal_pro_backup_${new Date().getTime()}.json`;
+            a.click();
+        }
+
+        function importData(e) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const importedData = JSON.parse(ev.target.result);
+                if (importedData.gastos) {
+                    gastos = importedData.gastos;
+                    delete importedData.gastos;
+                }
+                data = importedData;
+                saveData();
+                saveGastos();
+                location.reload();
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        function fullReset() {
+            if (confirm("¿Borrar todo? Esta acción no se puede deshacer.")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // ============ PDF VIEWER ============
+        function openPdf(name, content) {
+            document.getElementById('pdf-title').innerText = name;
+            document.getElementById('pdf-iframe').src = content;
+            document.getElementById('pdf-overlay').style.display = 'flex';
+        }
+
+        function closePdf() {
+            document.getElementById('pdf-overlay').style.display = 'none';
+            document.getElementById('pdf-iframe').src = '';
+        }
+
+        // ============ INICIALIZACIÓN ============
+        applyTheme();
+        renderInicio();
+
+        // ============ SERVICE WORKER (PWA) ============
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('✓ Service Worker registrado'))
+                .catch(err => console.log('✗ SW error:', err));
+        }
+
+        // Mostrar prompts de instalación
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('✓ App lista para instalar');
+        });
+    </script>
+
+</body>
+
+</html>

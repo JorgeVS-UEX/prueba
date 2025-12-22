@@ -1,0 +1,59 @@
+{
+  "name": "Crystal Pro",
+  "short_name": "Agenda",
+  "description": "Gestor de tareas, asignaturas, notas, gastos y horario todo en uno",
+  "scope": "./",
+  "start_url": "app.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "categories": ["productivity", "education"],
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Asignaturas",
+      "short_name": "Asignaturas",
+      "url": "app.html?section=asignaturas",
+      "icons": [{ "src": "logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Notas",
+      "short_name": "Notas",
+      "url": "app.html?section=notas",
+      "icons": [{ "src": "logo.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "app.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "pdf",
+          "accept": ["application/pdf"]
+        }
+      ]
+    }
+  }
+}

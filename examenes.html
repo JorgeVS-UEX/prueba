@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Crystal Pro v8 - Compact Mode</title>
+    <style>
+        :root {
+            --bg: #000000; --card: #161b22; --card-border: #30363d;
+            --text-main: #f0f6fc; --text-dim: #8b949e; --accent: #bc8cff;
+            --accent-glow: rgba(188, 140, 255, 0.2); --red: #ff7b72;
+            --green: #3fb950; --yellow: #d29922;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 100px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+        .view { display: none; opacity: 0; transform: translateY(10px); }
+        .view.active { display: block; opacity: 1; transform: translateY(0); }
+
+        h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 20px; padding-left: 5px; }
+
+        /* Tarjeta Colapsable */
+        .card { 
+            background: var(--card); border: 1px solid var(--card-border); 
+            border-radius: 24px; margin-bottom: 12px; overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .card-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .card-body { 
+            max-height: 0; padding: 0 20px; opacity: 0; pointer-events: none;
+            border-top: 1px solid transparent;
+        }
+        
+        /* Estado Expandido */
+        .card.expanded { cursor: default; border-color: var(--accent); }
+        .card.expanded .card-body { 
+            max-height: 2000px; padding-bottom: 25px; opacity: 1; 
+            pointer-events: auto; border-top-color: var(--card-border);
+            margin-top: 10px;
+        }
+
+        .score-badge {
+            font-size: 1.4rem; font-weight: 800; padding: 5px 15px;
+            border-radius: 15px; background: rgba(0,0,0,0.3);
+        }
+
+        .section-box {
+            background: rgba(255,255,255,0.03); border-radius: 18px;
+            padding: 15px; margin-top: 15px; border: 1px solid var(--card-border);
+        }
+
+        .item-row {
+            display: flex; justify-content: space-between; padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem;
+        }
+
+        .inline-input {
+            background: #0d1117; border: 1px solid var(--card-border);
+            color: white; padding: 10px; border-radius: 12px; font-size: 0.9rem; width: 100%;
+        }
+
+        .btn-check {
+            background: var(--accent); color: #000; border: none;
+            padding: 10px 15px; border-radius: 10px; font-weight: 700;
+        }
+
+        .progress-mini { width: 100%; height: 4px; background: #30363d; border-radius: 2px; margin-top: 8px; }
+        .progress-fill { height: 100%; border-radius: 2px; }
+
+        nav { 
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+            width: 85%; background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(15px); 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; padding: 10px;
+        }
+
+        .nav-btn { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.7rem; font-weight: bold; }
+        .nav-btn.active { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <section id="view-asignaturas" class="view">
+        <h1>Materias</h1>
+        <div class="card" style="padding: 15px; cursor: default;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="new-asig" class="inline-input" placeholder="Nueva asignatura...">
+                <button class="btn-check" onclick="addAsig()">+</button>
+            </div>
+        </div>
+        <div id="asig-list"></div>
+    </section>
+
+    <section id="view-notas" class="view active">
+        <h1>Mi Progreso</h1>
+        <div id="notas-main"></div>
+    </section>
+</div>
+
+<nav>
+    <button class="nav-btn" onclick="showView('asignaturas')">📚<br>LISTA</button>
+    <button class="nav-btn active" onclick="showView('notas')">📊<br>NOTAS</button>
+</nav>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('crystal_v6')) || { asigs: [] };
+    let expandedId = null; // Para saber qué materia está abierta
+
+    function save() { localStorage.setItem('crystal_v6', JSON.stringify(data)); }
+
+    function toggleExpand(id) {
+        expandedId = (expandedId === id) ? null : id;
+        renderNotas();
+    }
+
+    function showView(v) {
+        document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+        document.getElementById('view-'+v).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        if(v === 'notas') renderNotas();
+        if(v === 'asignaturas') renderAsigs();
+    }
+
+    function addAsig() {
+        const name = document.getElementById('new-asig').value;
+        if(name) {
+            data.asigs.push({ id: Date.now(), name, secciones: [] });
+            save(); renderAsigs(); document.getElementById('new-asig').value = '';
+        }
+    }
+
+    function renderAsigs() {
+        document.getElementById('asig-list').innerHTML = data.asigs.map(a => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding: 15px 20px; cursor:default">
+                <span style="font-weight:600;">📘 ${a.name}</span>
+                <button onclick="delAsig(${a.id})" style="background:none; border:none; color:var(--red)">🗑️</button>
+            </div>
+        `).join('');
+    }
+
+    function delAsig(id) { data.asigs = data.asigs.filter(a => a.id !== id); save(); renderAsigs(); }
+
+    function renderNotas() {
+        const container = document.getElementById('notas-main');
+        if(data.asigs.length === 0) { 
+            container.innerHTML = '<div style="text-align:center; color:var(--text-dim); margin-top:40px">No hay datos.</div>'; 
+            return; 
+        }
+
+        container.innerHTML = data.asigs.map(asig => {
+            const final = calcularFinal(asig);
+            const pesoTotal = asig.secciones.reduce((acc, s) => acc + s.peso, 0);
+            const colorNota = final >= 5 ? (final >= 7 ? 'var(--accent)' : 'var(--yellow)') : 'var(--red)';
+            const isExpanded = expandedId === asig.id;
+
+            return `
+                <div class="card ${isExpanded ? 'expanded' : ''}" onclick="if(!event.target.closest('button') && !event.target.closest('input')) toggleExpand(${asig.id})">
+                    <div class="card-header">
+                        <div style="flex:1">
+                            <div style="font-size:1.1rem; font-weight:700;">${asig.name}</div>
+                            <div class="progress-mini">
+                                <div class="progress-fill" style="width:${pesoTotal}%; background:${pesoTotal === 100 ? 'var(--green)' : 'var(--accent)'}"></div>
+                            </div>
+                        </div>
+                        <div class="score-badge" style="color:${colorNota}">${final.toFixed(1)}</div>
+                    </div>
+
+                    <div class="card-body">
+                        ${asig.secciones.map((sec, sIdx) => {
+                            const prom = calcularPromedioSeccion(sec);
+                            return `
+                            <div class="section-box">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                                    <span style="font-size:0.7rem; font-weight:bold; color:var(--text-dim)">${sec.nombre} (${sec.peso}%)</span>
+                                    <span style="font-weight:bold; color:${prom < 5 ? 'var(--red)' : 'var(--accent)'}">Media: ${prom.toFixed(2)}</span>
+                                </div>
+                                ${sec.items.map(it => `
+                                    <div class="item-row">
+                                        <span>${it.nombre}</span>
+                                        <span style="font-weight:bold; color:${it.nota < 5 ? 'var(--red)' : 'var(--text-main)'}">${it.nota.toFixed(1)}</span>
+                                    </div>
+                                `).join('')}
+                                <div style="display:flex; gap:5px; margin-top:10px">
+                                    <input type="text" id="it-n-${asig.id}-${sIdx}" class="inline-input" placeholder="Nombre" style="flex:2">
+                                    <input type="number" id="it-v-${asig.id}-${sIdx}" class="inline-input" placeholder="Nota" style="flex:1">
+                                    <button class="btn-check" onclick="addItem(${asig.id}, ${sIdx})">+</button>
+                                </div>
+                                <button onclick="delSec(${asig.id}, ${sIdx})" style="width:100%; background:none; border:none; color:var(--red); font-size:0.6rem; margin-top:10px">ELIMINAR SECCIÓN</button>
+                            </div>
+                        `;}).join('')}
+
+                        ${pesoTotal < 100 ? `
+                            <div style="margin-top:15px; padding:15px; border:1px dashed var(--card-border); border-radius:15px">
+                                <div style="font-size:0.7rem; font-weight:bold; margin-bottom:8px">NUEVA SECCIÓN (${100-pesoTotal}% libre)</div>
+                                <div style="display:flex; gap:5px">
+                                    <input type="text" id="n-sec-${asig.id}" class="inline-input" placeholder="Ej: Examen" style="flex:2">
+                                    <input type="number" id="p-sec-${asig.id}" class="inline-input" placeholder="%" style="flex:1">
+                                    <button class="btn-check" onclick="addSec(${asig.id}, ${100-pesoTotal})">OK</button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Funciones Lógicas (sin cambios mayores, solo IDs de inputs)
+    function addSec(id, max) {
+        const n = document.getElementById(`n-sec-${id}`).value;
+        const p = parseFloat(document.getElementById(`p-sec-${id}`).value);
+        if(n && p > 0 && p <= max) {
+            data.asigs.find(a => a.id === id).secciones.push({ nombre: n, peso: p, items: [] });
+            save(); renderNotas();
+        }
+    }
+
+    function addItem(asigId, sIdx) {
+        const n = document.getElementById(`it-n-${asigId}-${sIdx}`).value;
+        const v = parseFloat(document.getElementById(`it-v-${asigId}-${sIdx}`).value);
+        if(n && !isNaN(v)) {
+            data.asigs.find(a => a.id === asigId).secciones[sIdx].items.push({ nombre: n, nota: v });
+            save(); renderNotas();
+        }
+    }
+
+    function delSec(asigId, sIdx) { data.asigs.find(a => a.id === asigId).secciones.splice(sIdx, 1); save(); renderNotas(); }
+    function calcularPromedioSeccion(sec) { return sec.items.length ? sec.items.reduce((a, b) => a + b.nota, 0) / sec.items.length : 0; }
+    function calcularFinal(asig) { return asig.secciones.reduce((acc, sec) => acc + (calcularPromedioSeccion(sec) * (sec.peso / 100)), 0); }
+
+    showView('notas');
+</script>
+</body>
+</html>

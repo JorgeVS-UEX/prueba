@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Pro - Sistema Integrado</title>
+    <style>
+        :root {
+            --bg: #000000; --card: #111418; --card-border: #2d333b;
+            --text-main: #f0f6fc; --text-dim: #8b949e; --accent: #bc8cff;
+            --red: #f85149; --nav-bg: rgba(255, 255, 255, 0.03); 
+        }
+        * { box-sizing: border-box; transition: all 0.2s ease; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 120px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .view { display: none; } .view.active { display: block; }
+
+        #live-date { color: var(--accent); font-weight: 700; font-size: 1.3rem; margin-bottom: 15px; text-transform: capitalize; }
+        .card { background: var(--card); border: 1px solid var(--card-border); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        h2 { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 15px 0; }
+
+        .inline-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .row-form { display: flex; gap: 10px; }
+        .inline-input { flex-grow: 1; background: #000; border: 1px solid var(--card-border); color: white; padding: 12px; border-radius: 12px; outline: none; font-size: 0.9rem; }
+        .btn-check { background: var(--accent); color: black; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 15px; margin-bottom: 8px; }
+        .item-row.done { opacity: 0.5; text-decoration: line-through; border-style: dashed; }
+        
+        .exam-card { border-left: 4px solid var(--accent); cursor: pointer; }
+        .days-left { font-size: 0.7rem; background: var(--accent); color: black; padding: 2px 8px; border-radius: 5px; font-weight: bold; }
+
+        .sub-section { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 1px solid var(--card-border); }
+        
+        #pdf-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 5000; padding: 20px; flex-direction: column; }
+        .pdf-container { width: 100%; height: 100%; background: var(--card); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; }
+        iframe { width: 100%; flex-grow: 1; border: none; }
+
+        nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; padding: 8px; }
+        .nav-btn { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.7rem; font-weight: bold; text-align: center; }
+        .nav-btn.active { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <section id="view-inicio" class="view active">
+        <div id="live-date">...</div>
+        
+        <div class="card">
+            <h2>📅 Horario de Hoy</h2>
+            <div id="horario-hoy"></div>
+        </div>
+
+        <div class="card">
+            <h2>✅ Tareas</h2>
+            <div class="row-form">
+                <input type="text" id="todo-input" class="inline-input" placeholder="Añadir tarea...">
+                <button class="btn-check" onclick="addTodo()">+</button>
+            </div>
+            <div id="todo-list"></div>
+        </div>
+
+        <div class="card">
+            <h2>📝 Próximos Exámenes</h2>
+            <button class="btn-check" style="width:100%; margin-bottom:15px" onclick="showExamForm()">+ Crear Examen</button>
+            <div id="exam-form-div" style="display:none" class="card">
+                <div class="inline-form">
+                    <input type="text" id="ex-name" class="inline-input" placeholder="Nombre Examen">
+                    <input type="date" id="ex-date" class="inline-input">
+                    <select id="ex-asig" class="inline-input" onchange="loadTemasForExam()">
+                        <option value="">Selecciona Asignatura</option>
+                    </select>
+                    <div id="ex-temas-selection" style="font-size:0.8rem; color:var(--text-dim)"></div>
+                    <button class="btn-check" onclick="saveExam()">Confirmar</button>
+                </div>
+            </div>
+            <div id="exam-list"></div>
+        </div>
+    </section>
+
+    <section id="view-asignaturas" class="view">
+        <h1>Asignaturas</h1>
+        <div class="card">
+            <div class="row-form">
+                <input type="text" id="new-asig-name" class="inline-input" placeholder="Nombre asignatura...">
+                <button class="btn-check" onclick="addAsig()">Crear</button>
+            </div>
+        </div>
+        <div id="asig-container"></div>
+    </section>
+</div>
+
+<div id="pdf-overlay">
+    <div class="pdf-container">
+        <div style="padding:15px; display:flex; justify-content:space-between; background:#111">
+            <span id="pdf-title">Documento</span>
+            <button onclick="closePdf()" style="color:var(--red); background:none; border:none; font-weight:bold">X</button>
+        </div>
+        <iframe id="pdf-iframe"></iframe>
+    </div>
+</div>
+
+<nav>
+    <button class="nav-btn active" onclick="showView('inicio')">🏠<br>INICIO</button>
+    <button class="nav-btn" onclick="showView('asignaturas')">📚<br>ASIGNATURAS</button>
+</nav>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('crystal_v4')) || { asignaturas: [], todos: [], exams: [] };
+    const todayStr = new Date().toDateString();
+
+    function saveData() { localStorage.setItem('crystal_v4', JSON.stringify(data)); }
+
+    function showView(v) {
+        document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+        document.getElementById('view-'+v).classList.add('active');
+        if(v === 'inicio') renderInicio();
+        if(v === 'asignaturas') renderAsignaturas();
+    }
+
+    // --- TAREAS CON AUTO-LIMPIEZA ---
+    function addTodo() {
+        const val = document.getElementById('todo-input').value;
+        if(val) {
+            data.todos.push({ id: Date.now(), text: val, done: false, date: todayStr });
+            document.getElementById('todo-input').value = '';
+            saveData(); renderInicio();
+        }
+    }
+
+    function toggleTodo(id) {
+        let t = data.todos.find(x => x.id === id);
+        t.done = !t.done;
+        saveData(); renderInicio();
+    }
+
+    // --- EXÁMENES ---
+    function showExamForm() {
+        const div = document.getElementById('exam-form-div');
+        div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        const sel = document.getElementById('ex-asig');
+        sel.innerHTML = '<option value="">Selecciona Asignatura</option>' + 
+            data.asignaturas.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+    }
+
+    function loadTemasForExam() {
+        const asigId = document.getElementById('ex-asig').value;
+        const asig = data.asignaturas.find(a => a.id == asigId);
+        const container = document.getElementById('ex-temas-selection');
+        if(asig) {
+            container.innerHTML = 'Selecciona temas:<br>' + asig.temas.map(t => `
+                <label><input type="checkbox" value="${t.id}" class="ex-tema-cb"> ${t.name}</label>
+            `).join('<br>');
+        }
+    }
+
+    function saveExam() {
+        const name = document.getElementById('ex-name').value;
+        const date = document.getElementById('ex-date').value;
+        const asigId = document.getElementById('ex-asig').value;
+        const selectedTemas = Array.from(document.querySelectorAll('.ex-tema-cb:checked')).map(cb => cb.value);
+        
+        if(name && date && asigId) {
+            data.exams.push({ id: Date.now(), name, date, asigId, temas: selectedTemas });
+            saveData(); 
+            document.getElementById('exam-form-div').style.display = 'none';
+            renderInicio();
+        }
+    }
+
+    function renderInicio() {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0); // Normalizamos para comparar solo fechas
+
+        // 1. Limpieza de tareas viejas marcadas
+        data.todos = data.todos.filter(t => !t.done || t.date === todayStr);
+
+        // 2. NUEVO: Limpieza automática de exámenes pasados
+        data.exams = data.exams.filter(ex => {
+            const fechaExamen = new Date(ex.date);
+            fechaExamen.setHours(0, 0, 0, 0);
+            // Solo mantenemos los exámenes cuya fecha sea hoy o en el futuro
+            return fechaExamen >= hoy;
+        });
+
+        saveData();
+
+        // 3. Render Tareas (Igual que antes)
+        document.getElementById('todo-list').innerHTML = data.todos.map(t => `
+            <div class="item-row ${t.done?'done':''}" onclick="toggleTodo(${t.id})">
+                <span>${t.done ? '✅' : '⭕'} ${t.text}</span>
+            </div>
+        `).join('');
+
+        // 4. Render Exámenes (Igual que antes)
+        const exList = document.getElementById('exam-list');
+        const sortedExams = data.exams.sort((a,b) => new Date(a.date) - new Date(b.date));
+        
+        if (sortedExams.length === 0) {
+            exList.innerHTML = '<div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">No hay exámenes próximos</div>';
+        } else {
+            exList.innerHTML = sortedExams.map(ex => {
+                const diff = Math.ceil((new Date(ex.date) - hoy) / (1000*60*60*24));
+                const asig = data.asignaturas.find(a => a.id == ex.asigId);
+                return `
+                    <div class="item-row exam-card" onclick="toggleExamFiles(${ex.id})">
+                        <div>
+                            <div style="font-weight:bold">${ex.name}</div>
+                            <div style="font-size:0.7rem; color:var(--accent)">${asig ? asig.name : 'Asignatura borrada'} - ${ex.date}</div>
+                        </div>
+                        <span class="days-left">${diff === 0 ? 'HOY' : 'Faltan '+diff+'d'}</span>
+                    </div>
+                    <div id="ex-files-${ex.id}" class="sub-section" style="display:none"></div>
+                `;
+            }).join('');
+        }
+    }
+
+    function toggleExamFiles(exId) {
+        const div = document.getElementById(`ex-files-${exId}`);
+        div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        if(div.style.display === 'block') {
+            const ex = data.exams.find(e => e.id === exId);
+            const asig = data.asignaturas.find(a => a.id == ex.asigId);
+            let html = '<strong>Recursos de estudio:</strong><br>';
+            ex.temas.forEach(tid => {
+                const tema = asig.temas.find(t => t.id == tid);
+                if(tema) {
+                    tema.files.forEach(f => {
+                        html += `<div style="margin:5px 0; font-size:0.8rem; color:var(--accent); cursor:pointer" onclick="openPdf('${f.name}','${f.content}')">📄 ${f.name} (Tema: ${tema.name})</div>`;
+                    });
+                }
+            });
+            div.innerHTML = html;
+        }
+    }
+
+    // --- COPIADO DE LOGICA ASIGNATURAS (REDUCIDO) ---
+    function addAsig() {
+        const n = document.getElementById('new-asig-name').value;
+        if(n) { data.asignaturas.push({id:Date.now(), name:n, temas:[]}); saveData(); renderAsignaturas(); }
+    }
+    function renderAsignaturas() {
+        document.getElementById('asig-container').innerHTML = data.asignaturas.map(a => `
+            <div class="card">
+                <div class="item-row"><strong>${a.name}</strong></div>
+                <div class="inline-form">
+                    <input type="text" id="t-in-${a.id}" class="inline-input" placeholder="Nuevo tema">
+                    <button class="btn-check" onclick="addTema(${a.id})">+</button>
+                </div>
+                <div id="t-list-${a.id}"></div>
+            </div>
+        `).join('');
+        data.asignaturas.forEach(a => renderTemas(a.id));
+    }
+    function addTema(aid) {
+        const v = document.getElementById('t-in-'+aid).value;
+        if(v) { data.asignaturas.find(x=>x.id==aid).temas.push({id:Date.now(), name:v, files:[]}); saveData(); renderAsignaturas(); }
+    }
+    function renderTemas(aid) {
+        const asig = data.asignaturas.find(x=>x.id==aid);
+        document.getElementById('t-list-'+aid).innerHTML = asig.temas.map(t => `
+            <div style="font-size:0.8rem; margin:5px 0; padding-left:10px; border-left:1px solid #333">
+                ${t.name} <input type="file" onchange="addFile(event, ${aid}, ${t.id})" style="font-size:0.6rem">
+            </div>
+        `).join('');
+    }
+    function addFile(e, aid, tid) {
+        const f = e.target.files[0]; const reader = new FileReader();
+        reader.onload = (ev) => {
+            data.asignaturas.find(x=>x.id==aid).temas.find(x=>x.id==tid).files.push({name:f.name, content:ev.target.result});
+            saveData(); alert('Archivo subido');
+        }; reader.readAsDataURL(f);
+    }
+
+    function openPdf(n, c) { document.getElementById('pdf-title').innerText = n; document.getElementById('pdf-iframe').src = c; document.getElementById('pdf-overlay').style.display = 'flex'; }
+    function closePdf() { document.getElementById('pdf-overlay').style.display = 'none'; document.getElementById('pdf-iframe').src = ''; }
+
+    document.getElementById('live-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    renderInicio();
+</script>
+</body>
+</html>

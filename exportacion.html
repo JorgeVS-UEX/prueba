@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Crystal Pro v11 - Ultimate</title>
+    <style>
+        :root {
+            --bg: #000000; --card: #111418; --card-border: #2d333b;
+            --text-main: #f0f6fc; --text-dim: #8b949e; --accent: #bc8cff;
+            --red: #f85149; --green: #3fb950; --blue: #388bfd;
+            --nav-bg: rgba(22, 27, 34, 0.8);
+        }
+        body.light-mode {
+            --bg: #f6f8fa; --card: #ffffff; --card-border: #d0d7de;
+            --text-main: #1f2328; --text-dim: #57606a; --accent: #8250df;
+            --nav-bg: rgba(255, 255, 255, 0.8);
+        }
+
+        * { box-sizing: border-box; transition: all 0.2s ease; font-family: -apple-system, system-ui, sans-serif; }
+        body { background: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 120px; overflow-x: hidden; }
+        
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+
+        .card { background: var(--card); border: 1px solid var(--card-border); border-radius: 24px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 5px; color: var(--accent); }
+        h2 { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+
+        /* HORARIO ITEMS */
+        .schedule-item { 
+            display: flex; align-items: center; gap: 12px; background: rgba(128,128,128,0.05); 
+            padding: 12px; border-radius: 16px; margin-bottom: 8px; border-left: 4px solid var(--blue);
+        }
+        .schedule-item.practica { border-left-color: var(--green); }
+        .time-box { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); min-width: 75px; }
+        .subject-box { flex-grow: 1; font-size: 0.9rem; font-weight: 600; }
+
+        /* INPUTS & BUTTONS */
+        input, select, textarea { 
+            width: 100%; background: rgba(128,128,128,0.1); border: 1px solid var(--card-border); 
+            color: var(--text-main); padding: 12px; border-radius: 12px; font-size: 1rem; margin-bottom: 8px;
+        }
+        .btn { 
+            width: 100%; padding: 14px; border-radius: 14px; border: none; font-weight: 700; 
+            cursor: pointer; font-size: 0.9rem; margin-bottom: 10px;
+        }
+        .btn-accent { background: var(--accent); color: #000; }
+        .btn-outline { background: none; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-red { background: rgba(248, 81, 73, 0.1); color: var(--red); }
+
+        /* NAVEGACIÓN */
+        nav { 
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+            width: 92%; max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(20px); 
+            border: 1px solid rgba(128,128,128,0.2); border-radius: 30px; display: flex; padding: 8px; z-index: 1000;
+        }
+        .nav-btn { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.65rem; font-weight: 800; cursor: pointer; }
+        .nav-btn.active { color: var(--accent); }
+
+        /* FORMULARIOS DESPLEGABLES */
+        .drawer { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--card-border); }
+        .drawer.open { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <section id="view-inicio" class="view active">
+        <h1 id="header-date">...</h1>
+        <div class="card">
+            <h2>📅 Hoy</h2>
+            <div id="horario-hoy"></div>
+        </div>
+        <div class="card">
+            <h2>✅ Tareas</h2>
+            <div id="todo-list"></div>
+        </div>
+    </section>
+
+    <section id="view-horario" class="view">
+        <h1>Horario</h1>
+        <div id="horario-config"></div>
+    </section>
+
+    <section id="view-ajustes" class="view">
+        <h1>Ajustes</h1>
+        <div class="card">
+            <h2>🎨 Apariencia</h2>
+            <button class="btn btn-accent" onclick="toggleTheme()">Cambiar Modo Claro / Oscuro</button>
+        </div>
+        <div class="card">
+            <h2>💾 Datos</h2>
+            <button class="btn btn-outline" onclick="exportData()">Exportar Backup (JSON)</button>
+            <button class="btn btn-outline" onclick="document.getElementById('importInput').click()">Importar Backup</button>
+            <input type="file" id="importInput" hidden onchange="importData(event)">
+            <button class="btn btn-red" onclick="fullReset()">Borrar Todo</button>
+        </div>
+    </section>
+</div>
+
+<nav>
+    <button class="nav-btn active" onclick="showView('inicio')">🏠<br>INICIO</button>
+    <button class="nav-btn" onclick="showView('horario')">🗓️<br>HORARIO</button>
+    <button class="nav-btn" onclick="showView('ajustes')">⚙️<br>AJUSTES</button>
+</nav>
+
+<script>
+    // 1. CARGA DE DATOS
+    let data = JSON.parse(localStorage.getItem('crystal_pro_v11')) || {
+        horario: { "lunes": [], "martes": [], "miércoles": [], "jueves": [], "viernes": [] },
+        todos: [],
+        config: { theme: 'dark' }
+    };
+
+    function save() { localStorage.setItem('crystal_pro_v11', JSON.stringify(data)); }
+
+    // 2. NAVEGACIÓN
+    function showView(v) {
+        document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+        document.getElementById('view-'+v).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        event?.currentTarget?.classList.add('active');
+        
+        if(v === 'inicio') renderInicio();
+        if(v === 'horario') renderHorarioConfig();
+    }
+
+    // 3. GESTIÓN DE HORARIO
+    function renderHorarioConfig() {
+        const container = document.getElementById('horario-config');
+        container.innerHTML = Object.keys(data.horario).map(dia => `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <span style="font-weight:900; color:var(--accent); text-transform:uppercase">${dia}</span>
+                    <button class="btn btn-outline" style="width:auto; margin:0; padding:5px 15px" onclick="toggleDrawer('${dia}')">+</button>
+                </div>
+                
+                <div id="drawer-${dia}" class="drawer">
+                    <div style="display:flex; gap:10px">
+                        <input type="time" id="in-${dia}">
+                        <input type="time" id="out-${dia}">
+                    </div>
+                    <input type="text" id="name-${dia}" placeholder="Nombre clase...">
+                    <select id="type-${dia}">
+                        <option value="clase">📚 Teoría</option>
+                        <option value="practica">🧪 Práctica</option>
+                    </select>
+                    <button class="btn btn-accent" onclick="addItem('${dia}')">Guardar</button>
+                </div>
+
+                <div id="list-${dia}" style="margin-top:15px">
+                    ${data.horario[dia].map((item, idx) => `
+                        <div class="schedule-item ${item.type}">
+                            <div class="time-box">${item.start} - ${item.end}</div>
+                            <div class="subject-box">${item.name}</div>
+                            <button onclick="removeItem('${dia}', ${idx})" style="background:none; border:none; color:var(--red)">✕</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleDrawer(dia) { document.getElementById(`drawer-${dia}`).classList.toggle('open'); }
+
+    // --- FUNCIÓN DE AÑADIR ACTUALIZADA CON ORDENACIÓN ---
+    function addItem(dia) {
+        const start = document.getElementById(`in-${dia}`).value;
+        const end = document.getElementById(`out-${dia}`).value;
+        const name = document.getElementById(`name-${dia}`).value;
+        const type = document.getElementById(`type-${dia}`).value;
+        
+        if(start && end && name) {
+            // 1. Añadimos el nuevo objeto
+            data.horario[dia].push({ 
+                start: start, 
+                end: end, 
+                name: name, 
+                type: type 
+            });
+
+            // 2. ORDENACIÓN CRONOLÓGICA:
+            // Comparamos las cadenas de texto "HH:MM". 
+            // Al ser formato 24h, la comparación alfabética funciona perfectamente para el tiempo.
+            data.horario[dia].sort((a, b) => {
+                if (a.start < b.start) return -1;
+                if (a.start > b.start) return 1;
+                return 0;
+            });
+
+            save(); // Guardamos en LocalStorage
+            renderHorarioConfig(); // Refrescamos la vista de ajustes
+            
+            // Limpiamos los campos del formulario después de añadir
+            document.getElementById(`in-${dia}`).value = "";
+            document.getElementById(`out-${dia}`).value = "";
+            document.getElementById(`name-${dia}`).value = "";
+            
+            // Cerramos el desplegable para ver la lista ordenada
+            toggleDrawer(dia);
+        } else {
+            alert("Por favor, rellena todos los campos (Hora inicio, fin y nombre)");
+        }
+    }
+
+    function removeItem(dia, idx) { data.horario[dia].splice(idx, 1); save(); renderHorarioConfig(); }
+
+    // 4. INICIO Y TAREAS
+    function renderInicio() {
+        const ahora = new Date();
+        document.getElementById('header-date').innerText = ahora.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        
+        const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        const hoy = dias[ahora.getDay()];
+        const hContainer = document.getElementById('horario-hoy');
+
+        if(hoy === "sábado" || hoy === "domingo") {
+            hContainer.innerHTML = "<p style='color:var(--text-dim)'>Fin de semana libre ✨</p>";
+        } else {
+            const clases = data.horario[hoy] || [];
+            hContainer.innerHTML = clases.length ? clases.map(c => `
+                <div class="schedule-item ${c.type}">
+                    <div class="time-box">${c.start} - ${c.end}</div>
+                    <div class="subject-box">${c.name}</div>
+                </div>
+            `).join('') : "<p style='color:var(--text-dim)'>No hay clases hoy.</p>";
+        }
+    }
+
+    // 5. AJUSTES Y DATOS
+    function toggleTheme() {
+        data.config.theme = data.config.theme === 'dark' ? 'light' : 'dark';
+        applyTheme(); save();
+    }
+
+    function applyTheme() {
+        if(data.config.theme === 'light') document.body.classList.add('light-mode');
+        else document.body.classList.remove('light-mode');
+    }
+
+    function exportData() {
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `crystal_pro_backup.json`; a.click();
+    }
+
+    function importData(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            data = JSON.parse(ev.target.result);
+            save(); location.reload();
+        };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    function fullReset() { if(confirm("¿Borrar todo?")) { localStorage.clear(); location.reload(); } }
+
+    // INIT
+    applyTheme();
+    renderInicio();
+</script>
+</body>
+</html>

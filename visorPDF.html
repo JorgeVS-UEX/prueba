@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Crystal Pro v3</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --card: #111418;
+            --card-border: #2d333b;
+            --text-main: #f0f6fc;
+            --text-dim: #8b949e;
+            --accent: #bc8cff;
+            --red: #f85149;
+            --nav-bg: rgba(255, 255, 255, 0.03); 
+        }
+
+        * { box-sizing: border-box; transition: all 0.2s ease; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 120px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* HEADER */
+        #live-date { color: var(--accent); font-weight: 700; font-size: 1.3rem; margin-bottom: 25px; text-transform: capitalize; }
+        .card { background: var(--card); border: 1px solid var(--card-border); border-radius: 20px; padding: 20px; margin-bottom: 20px; position: relative; }
+        h2 { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.2px; margin: 0 0 15px 0; }
+
+        /* FORMULARIOS INTEGRADOS */
+        .inline-form { display: flex; gap: 10px; margin-bottom: 15px; animation: fadeIn 0.3s ease; }
+        .inline-input { flex-grow: 1; background: #000; border: 1px solid var(--card-border); color: white; padding: 10px; border-radius: 10px; outline: none; }
+        .inline-input:focus { border-color: var(--accent); }
+        .btn-check { background: var(--accent); color: black; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* LISTAS */
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; }
+        .delete-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
+
+        .sub-section { margin-left: 15px; border-left: 2px solid var(--accent); padding-left: 15px; margin-top: 10px; }
+
+        /* BOTONES AGREGAR */
+        .btn-add { width: 100%; background: none; border: 1px dashed var(--card-border); color: var(--text-dim); padding: 10px; border-radius: 12px; cursor: pointer; margin-top: 5px; font-size: 0.8rem; }
+        .btn-add:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* VISOR PDF CON PADDING */
+        #pdf-overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 5000; 
+            padding: 40px 25px; /* Padding en cada lado */
+            flex-direction: column;
+        }
+        .pdf-container {
+            width: 100%; height: 100%; background: var(--card); 
+            border: 1px solid var(--card-border); border-radius: 20px;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        iframe { width: 100%; flex-grow: 1; border: none; background: #f1f1f1; }
+
+        /* NAV */
+        nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; padding: 8px; z-index: 2000; }
+        .nav-btn { flex: 1; background: none; border: none; color: var(--text-dim); padding: 10px; cursor: pointer; font-size: 0.7rem; font-weight: bold; text-align: center; }
+        .nav-btn.active { color: var(--accent); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <section id="view-inicio" class="view active">
+            <div id="live-date">Cargando fecha...</div>
+            <div class="card">
+                <h2>✅ Tareas de Hoy</h2>
+                <div class="inline-form">
+                    <input type="text" id="todo-input" class="inline-input" placeholder="¿Qué harás hoy?">
+                    <button class="btn-check" onclick="addTodo()">+</button>
+                </div>
+                <div id="todo-list"></div>
+            </div>
+        </section>
+
+        <section id="view-asignaturas" class="view">
+            <h1>Asignaturas</h1>
+            
+            <div id="asig-form" class="inline-form">
+                <input type="text" id="new-asig-name" class="inline-input" placeholder="Nombre de asignatura...">
+                <button class="btn-check" onclick="confirmAddAsignatura()">Crear</button>
+            </div>
+
+            <div id="asignaturas-container"></div>
+        </section>
+    </div>
+
+    <div id="pdf-overlay">
+        <div class="pdf-container">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid var(--card-border);">
+                <span id="pdf-title" style="font-weight:bold; color:var(--accent); font-size:0.9rem;">Documento</span>
+                <button onclick="closePdf()" style="background:var(--red); border:none; color:white; font-size:0.7rem; padding:5px 12px; border-radius:8px; cursor:pointer;">CERRAR</button>
+            </div>
+            <iframe id="pdf-iframe"></iframe>
+        </div>
+    </div>
+
+    <nav>
+        <button id="btn-nav-inicio" class="nav-btn active" onclick="showView('inicio')">🏠<br>INICIO</button>
+        <button id="btn-nav-asignaturas" class="nav-btn" onclick="showView('asignaturas')">📚<br>ASIGNATURAS</button>
+    </nav>
+
+    <script>
+        let data = JSON.parse(localStorage.getItem('agenda_pro_v3')) || { asignaturas: [], todos: [] };
+        function saveData() { localStorage.setItem('agenda_pro_v3', JSON.stringify(data)); }
+
+        function showView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-nav-' + view).classList.add('active');
+            if(view === 'asignaturas') renderAsignaturas();
+        }
+
+        // --- ASIGNATURAS ---
+        function confirmAddAsignatura() {
+            const name = document.getElementById('new-asig-name').value;
+            if(name) {
+                data.asignaturas.push({ id: Date.now(), name, temas: [] });
+                document.getElementById('new-asig-name').value = '';
+                saveData(); renderAsignaturas();
+            }
+        }
+
+        function renderAsignaturas() {
+            const container = document.getElementById('asignaturas-container');
+            container.innerHTML = data.asignaturas.map(asig => `
+                <div class="card">
+                    <div class="item-row" onclick="toggleTemas(${asig.id})">
+                        <span style="font-weight:bold;">📘 ${asig.name}</span>
+                        <button class="delete-btn" onclick="deleteAsig(${asig.id}, event)">🗑️</button>
+                    </div>
+                    <div id="temas-sec-${asig.id}" class="sub-section" style="display:none;">
+                        <div id="temas-list-${asig.id}"></div>
+                        <div class="inline-form" style="margin-top:10px;">
+                            <input type="text" id="input-tema-${asig.id}" class="inline-input" placeholder="Nuevo tema...">
+                            <button class="btn-check" onclick="confirmAddTema(${asig.id})">+</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteAsig(id, e) { e.stopPropagation(); if(confirm("¿Borrar?")) { data.asignaturas = data.asignaturas.filter(a => a.id !== id); saveData(); renderAsignaturas(); } }
+
+        function toggleTemas(id) {
+            const el = document.getElementById(`temas-sec-${id}`);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            if(el.style.display === 'block') renderTemas(id);
+        }
+
+        // --- TEMAS ---
+        function confirmAddTema(asigId) {
+            const input = document.getElementById(`input-tema-${asigId}`);
+            if(input.value) {
+                const asig = data.asignaturas.find(a => a.id === asigId);
+                asig.temas.push({ id: Date.now(), name: input.value, files: [] });
+                input.value = ''; saveData(); renderTemas(asigId);
+            }
+        }
+
+        function renderTemas(asigId) {
+            const asig = data.asignaturas.find(a => a.id === asigId);
+            const container = document.getElementById(`temas-list-${asigId}`);
+            container.innerHTML = asig.temas.map(tema => `
+                <div style="margin-bottom:8px;">
+                    <div class="item-row" style="background:rgba(255,255,255,0.05); font-size:0.9rem;" onclick="toggleFiles(${asigId}, ${tema.id})">
+                        <span>📁 ${tema.name}</span>
+                        <button class="delete-btn" onclick="deleteTema(${asigId}, ${tema.id}, event)">🗑️</button>
+                    </div>
+                    <div id="files-sec-${tema.id}" class="sub-section" style="display:none; border-left-style:dashed;">
+                        <div id="files-list-${tema.id}"></div>
+                        <button class="btn-add" onclick="document.getElementById('file-${tema.id}').click()">+ Subir PDF</button>
+                        <input type="file" id="file-${tema.id}" hidden accept=".pdf" onchange="addFile(event, ${asigId}, ${tema.id})">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteTema(asigId, temaId, e) { e.stopPropagation(); const asig = data.asignaturas.find(a => a.id === asigId); asig.temas = asig.temas.filter(t => t.id !== temaId); saveData(); renderTemas(asigId); }
+
+        function toggleFiles(asigId, temaId) {
+            const el = document.getElementById(`files-sec-${temaId}`);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            if(el.style.display === 'block') renderFiles(asigId, temaId);
+        }
+
+        // --- ARCHIVOS ---
+        function addFile(e, asigId, temaId) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const asig = data.asignaturas.find(a => a.id === asigId);
+                const tema = asig.temas.find(t => t.id === temaId);
+                tema.files.push({ id: Date.now(), name: file.name, content: ev.target.result });
+                saveData(); renderFiles(asigId, temaId);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderFiles(asigId, temaId) {
+            const tema = data.asignaturas.find(a => a.id === asigId).temas.find(t => t.id === temaId);
+            document.getElementById(`files-list-${tema.id}`).innerHTML = tema.files.map(f => `
+                <div class="item-row" style="background:none; border:none; border-bottom:1px solid #222;">
+                    <span onclick="openPdf('${f.name}', '${f.content}')" style="font-size:0.8rem;">📄 ${f.name}</span>
+                    <button class="delete-btn" onclick="deleteFile(${asigId}, ${temaId}, ${f.id})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteFile(asigId, temaId, fileId) { 
+            const tema = data.asignaturas.find(a => a.id === asigId).temas.find(t => t.id === temaId);
+            tema.files = tema.files.filter(f => f.id !== fileId); saveData(); renderFiles(asigId, temaId); 
+        }
+
+        // --- VISOR ---
+        function openPdf(name, content) {
+            document.getElementById('pdf-title').innerText = name;
+            document.getElementById('pdf-iframe').src = content;
+            document.getElementById('pdf-overlay').style.display = 'flex';
+        }
+        function closePdf() { document.getElementById('pdf-overlay').style.display = 'none'; document.getElementById('pdf-iframe').src = ''; }
+
+        // --- TAREAS ---
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            if(input.value) { data.todos.push({ text: input.value, date: new Date().toDateString() }); input.value = ''; saveData(); renderTodos(); }
+        }
+        function renderTodos() {
+            const today = new Date().toDateString();
+            data.todos = data.todos.filter(t => t.date === today); saveData();
+            document.getElementById('todo-list').innerHTML = data.todos.map(t => `<div class="item-row"><span>${t.text}</span></div>`).join('');
+        }
+
+        document.getElementById('live-date').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        renderTodos();
+    </script>
+</body>
+</html>
