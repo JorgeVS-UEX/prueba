@@ -11,12 +11,14 @@
     <meta name="application-name" content="Agenda">
     <meta name="msapplication-TileColor" content="#bc8cff">
     <meta name="msapplication-config" content="browserconfig.xml">
+    <meta name="color-scheme" content="light dark">
     <link rel="icon" type="image/png" sizes="16x16" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23bc8cff' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>CP</text></svg>">
     <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23bc8cff' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>CP</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23bc8cff' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='90' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>CP</text></svg>">
     <link rel="manifest" href="manifest.json">
-    <title>APP</title>
+    <title>Agenda</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
             /* DARK MODE - Blanco y Negro con Glassmorphism */
@@ -38,6 +40,7 @@
             --nav-glass: rgba(0, 0, 0, 0.9);
             --blur-amount: 15px;
             --shadow-glow: rgba(255, 255, 255, 0.1);
+            color-scheme: dark;
         }
 
         body.light-mode {
@@ -60,6 +63,7 @@
             --nav-glass: rgba(255, 255, 255, 0.98);
             --blur-amount: 15px;
             --shadow-glow: rgba(0, 0, 0, 0.12);
+            color-scheme: light;
         }
 
         * {
@@ -75,8 +79,8 @@
             background-attachment: fixed;
             color: var(--text-main);
             margin: 0;
-            padding: 10px;
-            padding-bottom: 320px;
+            padding: 12px;
+            padding-bottom: 360px;
             min-height: 100vh;
         }
 
@@ -121,16 +125,16 @@
         }
 
         h1 {
-            font-size: 1.6rem;
+            font-size: 2rem;
             font-weight: 800;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             padding-left: 5px;
             color: var(--accent);
             letter-spacing: -0.5px;
         }
 
         h2 {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 1.2px;
@@ -145,8 +149,8 @@
             -webkit-backdrop-filter: blur(var(--blur-amount));
             border: 1px solid var(--glass-border);
             border-radius: 24px;
-            padding: 15px;
-            margin-bottom: 12px;
+            padding: 18px;
+            margin-bottom: 15px;
             position: relative;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
                         inset 0 1px 1px rgba(255, 255, 255, 0.2);
@@ -176,22 +180,23 @@
         .inline-form {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         .row-form {
             display: flex;
-            gap: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         @media (min-width: 768px) {
             .inline-form {
-                gap: 10px;
-                margin-bottom: 15px;
+                gap: 12px;
+                margin-bottom: 18px;
             }
             .row-form {
-                gap: 10px;
+                gap: 12px;
             }
         }
 
@@ -202,16 +207,20 @@
         select,
         textarea {
             flex-grow: 1;
-            background: rgba(255, 255, 255, 0.12);
+            background-color: var(--glass-light);
+            background: var(--glass-light);
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--glass-border);
             color: var(--text-main);
-            padding: 10px 12px;
-            border-radius: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
             outline: none;
-            font-size: 1rem;
+            font-size: 1.1rem;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            caret-color: var(--text-main);
+            field-sizing: content;
+            min-height: 48px;
         }
 
         input[type="text"]::placeholder,
@@ -237,21 +246,67 @@
         select:focus,
         textarea:focus {
             border-color: var(--accent);
+            background-color: rgba(255, 255, 255, 0.15);
             background: rgba(255, 255, 255, 0.15);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3),
                         0 0 0 3px rgba(255, 255, 255, 0.1);
         }
 
+        /* Light mode overrides for inputs */
+        body.light-mode input[type="text"],
+        body.light-mode input[type="date"],
+        body.light-mode input[type="time"],
+        body.light-mode input[type="number"],
+        body.light-mode select,
+        body.light-mode textarea {
+            background-color: var(--glass-light);
+            background: var(--glass-light);
+            border-color: var(--glass-border);
+            color: var(--text-main);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode input:focus,
+        body.light-mode select:focus,
+        body.light-mode textarea:focus {
+            background-color: rgba(0, 0, 0, 0.08);
+            background: rgba(0, 0, 0, 0.08);
+            border-color: var(--accent);
+        }
+
+        /* Prevenir autofill color forcing */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px var(--glass-light) inset !important;
+            box-shadow: 0 0 0 30px var(--glass-light) inset !important;
+            -webkit-text-fill-color: var(--text-main) !important;
+            color: var(--text-main) !important;
+            caret-color: var(--text-main) !important;
+        }
+
+        body.light-mode input:-webkit-autofill,
+        body.light-mode input:-webkit-autofill:hover,
+        body.light-mode input:-webkit-autofill:focus,
+        body.light-mode input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px rgba(0, 0, 0, 0.08) inset !important;
+            box-shadow: 0 0 0 30px rgba(0, 0, 0, 0.08) inset !important;
+            -webkit-text-fill-color: var(--text-main) !important;
+            color: var(--text-main) !important;
+        }
+
         .btn {
-            padding: 10px 12px;
-            border-radius: 12px;
+            padding: 14px 18px;
+            border-radius: 14px;
             border: none;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            font-size: 0.85rem;
-            min-height: 44px;
+            font-size: 1.05rem;
+            min-height: 54px;
             position: relative;
             overflow: hidden;
+            letter-spacing: 0.5px;
         }
 
         .btn::before {
@@ -339,7 +394,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
+            padding: 14px;
             background: var(--glass-light);
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
@@ -349,6 +404,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: inset 0 1px 1px var(--shadow-glow);
+            font-size: 1rem;
         }
 
         .item-row:hover {
@@ -610,29 +666,28 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
                         inset 0 1px 1px rgba(255, 255, 255, 0.1);
             z-index: 100;
-            height: 100px;
         }
 
         .nav-btn {
             flex: 1;
-            padding: 26px 14px;
+            padding: 28px 12px;
             border: none;
             background: transparent;
             color: var(--text-dim);
             cursor: pointer;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 700;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
-            min-height: 90px;
+            min-height: 110px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            height: 80px;
+            letter-spacing: 0.5px;
         }
 
         .nav-btn::before {
@@ -664,14 +719,12 @@
                 max-width: 600px;
                 padding: 20px;
                 bottom: 15px;
-                height: 100px;
             }
 
             .nav-btn {
                 padding: 26px 16px;
                 font-size: 0.9rem;
                 min-height: 90px;
-                height: 80px;
             }
         }
 
@@ -1023,9 +1076,9 @@
             </div>
         </section>
 
-        <!-- ============ ASIGNATURAS ============ -->
+        <!-- ============ ASIGNATURES ============ -->
         <section id="view-asignaturas" class="view">
-            <h1>Asignaturas</h1>
+            <h1>📖 Asig</h1>
             <div class="card">
                 <div class="row-form">
                     <input type="text" id="new-asig-name" placeholder="Nombre asignatura...">
@@ -1049,7 +1102,7 @@
             </div>
 
             <div class="charts-container">
-                <div class="card">
+                <div class="card" >
                     <h2>DISTRIBUCIÓN POR CATEGORÍA</h2>
                     <canvas id="pieChart"></canvas>
                 </div>
@@ -1058,6 +1111,7 @@
                     <canvas id="barChart"></canvas>
                 </div>
             </div>
+
 
             <div class="cat-grid">
                 <div class="cat-btn" onclick="registerGasto('Alquiler', 125)">
@@ -1119,11 +1173,12 @@
     <!-- PDF OVERLAY -->
     <div id="pdf-overlay">
         <div class="pdf-container">
-            <div style="padding:15px; display:flex; justify-content:space-between; background:#111">
-                <span id="pdf-title" style="font-weight: bold; color: var(--accent);">Documento</span>
-                <button onclick="closePdf()" style="color:var(--red); background:none; border:none; font-weight:bold">X</button>
+            <div style="padding:15px; display:flex; justify-content:space-between; align-items:center; background:var(--glass-light); border-bottom:1px solid var(--glass-border); border-radius:24px 24px 0 0; gap:10px; flex-wrap:wrap;">
+                <span id="pdf-title" style="font-weight: bold; color: var(--accent); flex:1; word-break:break-word; min-width:150px;">Documento</span>
+                <button id="pdf-download-btn" onclick="downloadCurrentPdf()" style="background:var(--accent); color:var(--bg-base); border:none; font-weight:bold; font-size:0.8rem; cursor:pointer; padding:8px 14px; border-radius:8px;">📥 DESCARGAR</button>
+                <button onclick="closePdf()" style="color:var(--red); background:none; border:none; font-weight:bold; font-size:1.5rem; cursor:pointer; padding:0 10px;">✕</button>
             </div>
-            <iframe id="pdf-iframe"></iframe>
+            <div id="pdf-content-container" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center;"></div>
         </div>
     </div>
 
@@ -1154,7 +1209,7 @@
     <!-- NAVIGATION -->
     <nav>
         <button class="nav-btn active" onclick="showView('inicio')">🏠<br>INICIO</button>
-        <button class="nav-btn" onclick="showView('asignaturas')">📖<br>ASIGNATURAS</button>
+        <button class="nav-btn" onclick="showView('asignaturas')">📖<br>ASIG</button>
         <button class="nav-btn" onclick="showView('notas')">📊<br>NOTAS</button>
         <button class="nav-btn" onclick="showView('gastos')">💵<br>GASTOS</button>
         <button class="nav-btn" onclick="showView('ajustes')">⚙️<br>CONFIG</button>
@@ -1162,7 +1217,7 @@
 
     <script>
         // ============ DATOS GLOBALES ============
-        let data = JSON.parse(localStorage.getItem('crystal_pro_unified')) || {
+        let data = JSON.parse(localStorage.getItem('APP_GESTION')) || {
             asignaturas: [],
             todos: [],
             exams: [],
@@ -1181,7 +1236,7 @@
 
         // ============ FUNCIONES DE GUARDADO ============
         function saveData() {
-            localStorage.setItem('crystal_pro_unified', JSON.stringify(data));
+            localStorage.setItem('APP_GESTION', JSON.stringify(data));
         }
 
         function saveGastos() {
@@ -1200,9 +1255,7 @@
             if (v === 'notas') renderNotas();
             if (v === 'gastos') {
                 renderGastos();
-                setTimeout(() => {
-                    if (document.getElementById('pieChart')) updateCharts();
-                }, 100);
+
             }
             if (v === 'ajustes') renderHorarioConfig();
         }
@@ -1238,10 +1291,18 @@
             const asigId = document.getElementById('ex-asig').value;
             const asig = data.asignaturas.find(a => a.id == asigId);
             const container = document.getElementById('ex-temas-selection');
-            if (asig) {
-                container.innerHTML = 'Selecciona temas:<br>' + asig.temas.map(t => `
-                    <label><input type="checkbox" value="${t.id}" class="ex-tema-cb"> ${t.name}</label>
-                `).join('<br>');
+            if (asig && asig.temas.length > 0) {
+                container.innerHTML = '<div style="margin-top:10px;"><strong style="font-size:0.85rem; color:var(--text-dim)">Selecciona temas:</strong><br><div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">' + 
+                asig.temas.map(t => `
+                    <label style="display:flex; align-items:center; gap:8px; padding:8px; background:rgba(255,255,255,0.08); border-radius:8px; cursor:pointer;">
+                        <input type="checkbox" value="${t.id}" class="ex-tema-cb" style="cursor:pointer;"> 
+                        <span>${t.name}</span>
+                    </label>
+                `).join('') + '</div></div>';
+            } else if (asig) {
+                container.innerHTML = '<div style="color:var(--text-dim); font-size:0.8rem; margin-top:10px;">Esta asignatura no tiene temas</div>';
+            } else {
+                container.innerHTML = '';
             }
         }
 
@@ -1260,70 +1321,85 @@
         }
 
         // ============ INICIO ============
-        function renderInicio() {
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
+       function renderInicio() {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
 
-            // Limpieza
-            data.todos = data.todos.filter(t => !t.done || t.date === todayStr);
-            data.exams = data.exams.filter(ex => {
-                const fechaExamen = new Date(ex.date);
-                fechaExamen.setHours(0, 0, 0, 0);
-                return fechaExamen >= hoy;
-            });
-            saveData();
+    // Limpieza de datos pasados
+    data.exams = data.exams.filter(ex => {
+        const fechaExamen = new Date(ex.date);
+        fechaExamen.setHours(0, 0, 0, 0);
+        return fechaExamen >= hoy;
+    });
+    saveData();
 
-            // Render Tareas
-            document.getElementById('todo-list').innerHTML = data.todos.map(t => `
-                <div class="item-row ${t.done ? 'done' : ''}" onclick="toggleTodo(${t.id})">
-                    <span>${t.done ? '✅' : '⭕'} ${t.text}</span>
-                </div>
-            `).join('');
+    // Render Tareas (se mantiene igual)
+    document.getElementById('todo-list').innerHTML = data.todos.map(t => `
+        <div class="item-row ${t.done ? 'done' : ''}" onclick="toggleTodo(${t.id})">
+            <span>${t.done ? '✅' : '⭕'} ${t.text}</span>
+        </div>
+    `).join('');
 
-            // Render Exámenes
-            const exList = document.getElementById('exam-list');
-            const sortedExams = data.exams.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Render Exámenes
+    const exList = document.getElementById('exam-list');
+    const sortedExams = data.exams.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            if (sortedExams.length === 0) {
-                exList.innerHTML = '<div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">No hay exámenes próximos</div>';
-            } else {
-                exList.innerHTML = sortedExams.map(ex => {
-                    const diff = Math.ceil((new Date(ex.date) - hoy) / (1000 * 60 * 60 * 24));
-                    const asig = data.asignaturas.find(a => a.id == ex.asigId);
-                    return `
-                        <div class="item-row exam-card" onclick="toggleExamFiles(${ex.id})">
-                            <div>
-                                <div style="font-weight:bold">${ex.name}</div>
-                                <div style="font-size:0.7rem; color:var(--accent)">${asig ? asig.name : 'Asignatura borrada'} - ${ex.date}</div>
-                            </div>
-                            <span class="days-left">${diff === 0 ? 'HOY' : 'Faltan ' + diff + 'd'}</span>
-                        </div>
-                        <div id="ex-files-${ex.id}" class="sub-section" style="display:none"></div>
-                    `;
-                }).join('');
+    if (sortedExams.length === 0) {
+        exList.innerHTML = '<div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">No hay exámenes próximos</div>';
+    } else {
+        exList.innerHTML = sortedExams.map(ex => {
+            const diff = Math.ceil((new Date(ex.date) - hoy) / (1000 * 60 * 60 * 24));
+            const asig = data.asignaturas.find(a => a.id == ex.asigId);
+            
+            let fileCount = 0;
+            if (asig && ex.temas) {
+                ex.temas.forEach(tid => {
+                    const tema = asig.temas.find(t => t.id == tid);
+                    if (tema && tema.files) fileCount += tema.files.length;
+                });
             }
-
-            // Render Horario de Hoy
-            const ahora = new Date();
-            const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-            const hoyDia = dias[ahora.getDay()];
-            const hContainer = document.getElementById('horario-hoy');
-
-            if (hoyDia === "sábado" || hoyDia === "domingo") {
-                hContainer.innerHTML = "<p style='color:var(--text-dim)'>Fin de semana libre ✨</p>";
-            } else {
-                const clases = data.horario[hoyDia] || [];
-                hContainer.innerHTML = clases.length ? clases.map(c => `
-                    <div class="schedule-item ${c.type}">
-                        <div class="time-box">${c.start} - ${c.end}</div>
-                        <div class="subject-box">${c.name}</div>
+            
+            return `
+                <div class="item-row exam-card" onclick="toggleExamFiles('${ex.id}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold">${ex.name}</div>
+                        <div style="font-size:0.7rem; color:var(--accent)">${asig ? asig.name : 'Asignatura borrada'} - ${ex.date}</div>
+                        <div style="font-size:0.65rem; color:var(--text-dim); margin-top:4px;">📚 ${fileCount} archivo${fileCount !== 1 ? 's' : ''}</div>
                     </div>
-                `).join('') : "<p style='color:var(--text-dim)'>No hay clases hoy.</p>";
-            }
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span class="days-left">${diff === 0 ? 'HOY' : 'Faltan ' + diff + 'd'}</span>
+                        <button onclick="event.stopPropagation(); deleteExam('${ex.id}')" 
+                                style="background:none; border:none; color:var(--red); cursor:pointer; font-size:1.3rem; padding:5px;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <div id="ex-files-${ex.id}" class="sub-section" style="display:none; padding:15px; margin-top:10px; background:rgba(255,255,255,0.05); border-radius:12px;"></div>
+            `;
+        }).join('');
+    }
+}
 
-            // Actualiza fecha
-            document.getElementById('live-date').innerText = ahora.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+function deleteExam(id) {
+    // Usamos el panel de aviso visual que creamos antes
+    if (!confirm("¿Borrar este examen de la lista?")) return;
+
+    const inicial = data.exams.length;
+    // Filtramos usando != para comparar ID string con ID number
+    data.exams = data.exams.filter(ex => ex.id != id);
+
+    if (data.exams.length < inicial) {
+        saveData(); // Persiste en LocalStorage
+        renderInicio(); // Actualiza la vista de inicio
+        
+        // Si tienes la función de aviso visual:
+        if (typeof showStatusPanel === 'function') {
+            showStatusPanel("✅ Examen eliminado");
         }
+    } else {
+        console.error("No se pudo encontrar el examen con ID:", id);
+    }
+}
 
         function toggleExamFiles(exId) {
             const div = document.getElementById(`ex-files-${exId}`);
@@ -1331,15 +1407,39 @@
             if (div.style.display === 'block') {
                 const ex = data.exams.find(e => e.id === exId);
                 const asig = data.asignaturas.find(a => a.id == ex.asigId);
-                let html = '<strong>Recursos de estudio:</strong><br>';
+                
+                if (!asig) {
+                    div.innerHTML = '<div style="color:var(--text-dim);">Asignatura no encontrada</div>';
+                    return;
+                }
+                
+                let html = '<div><strong style="font-size:0.85rem; color:var(--accent);">📚 Recursos de estudio</strong><br>';
+                let totalFiles = 0;
+                
                 ex.temas.forEach(tid => {
                     const tema = asig.temas.find(t => t.id == tid);
-                    if (tema) {
+                    if (tema && tema.files && tema.files.length > 0) {
+                        html += `<div style="margin-top:10px; padding:10px; background:rgba(255,255,255,0.08); border-radius:8px;">
+                            <div style="font-weight:600; font-size:0.8rem; color:var(--accent); margin-bottom:8px;">📁 ${tema.name}</div>`;
+                        
                         tema.files.forEach(f => {
-                            html += `<div style="margin:5px 0; font-size:0.8rem; color:var(--accent); cursor:pointer" onclick="openPdf('${f.name}','${f.content}')">📄 ${f.name} (Tema: ${tema.name})</div>`;
+                            html += `<div style="margin:6px 0; padding:8px; background:rgba(255,255,255,0.05); border-radius:6px; cursor:pointer; border-left:3px solid var(--accent);" onclick="openPdf('${f.name.replace(/'/g, "\\'")}', '${f.content}')">
+                                <span style="color:var(--accent); font-size:0.8rem;">📄 ${f.name}</span>
+                            </div>`;
+                            totalFiles++;
                         });
+                        
+                        html += '</div>';
                     }
                 });
+                
+                if (totalFiles === 0) {
+                    html += '<div style="color:var(--text-dim); font-size:0.8rem; margin-top:10px;">Sin archivos disponibles</div>';
+                } else {
+                    html += `<div style="color:var(--text-dim); font-size:0.75rem; margin-top:10px;">Total: ${totalFiles} archivo${totalFiles !== 1 ? 's' : ''}</div>`;
+                }
+                
+                html += '</div>';
                 div.innerHTML = html;
             }
         }
@@ -1376,6 +1476,9 @@
             renderAsignaturas();
         }
 
+        // ============ ASIGNATURAS - ESTADO ============
+        let expandedAsig = null;
+
         function renderAsignaturas() {
             console.log('renderAsignaturas() called, total:', data.asignaturas.length);
             const container = document.getElementById('asig-container');
@@ -1390,29 +1493,46 @@
                 return;
             }
             
-            container.innerHTML = data.asignaturas.map(a => `
-                <div class="card" id="asig-${a.id}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <strong style="color: var(--accent); font-size: 1.1rem;">${a.name}</strong>
-                        <button onclick="deleteAsig(${a.id})" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 1.3rem; padding: 0;">🗑️</button>
-                    </div>
-                    <div id="tema-form-${a.id}" style="margin-bottom: 15px;">
-                        <div class="inline-form">
-                            <input type="text" id="t-in-${a.id}" placeholder="Nombre del tema..." style="margin-bottom: 8px;">
-                            <button class="btn btn-check" style="width: 100%; margin-bottom: 8px;" onclick="addTema(${a.id})">+ Añadir Tema</button>
+            container.innerHTML = data.asignaturas.map(a => {
+                const isExpanded = expandedAsig === a.id;
+                return `
+                    <div class="card" id="asig-${a.id}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer;" onclick="toggleAsig(${a.id})">
+                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                <span style="font-size: 1.2rem;">${isExpanded ? '▼' : '▶'}</span>
+                                <strong style="color: var(--accent); font-size: 1.1rem;">${a.name}</strong>
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteAsig(${a.id})" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 1.3rem; padding: 0;">🗑️</button>
                         </div>
+                        ${isExpanded ? `
+                            <div id="asig-content-${a.id}" style="margin-top: 15px;">
+                                <div id="tema-form-${a.id}" style="margin-bottom: 15px;">
+                                    <div class="inline-form">
+                                        <input type="text" id="t-in-${a.id}" placeholder="Nombre del tema..." style="margin-bottom: 8px;">
+                                        <button class="btn btn-check" style="width: 100%; margin-bottom: 8px;" onclick="addTema(${a.id})">+ Añadir Tema</button>
+                                    </div>
+                                </div>
+                                <div id="t-list-${a.id}"></div>
+                            </div>
+                        ` : ''}
                     </div>
-                    <div id="t-list-${a.id}"></div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             console.log('Renderizando temas...');
             setTimeout(() => {
                 data.asignaturas.forEach(a => {
-                    console.log('Renderizando temas para asignatura:', a.id);
-                    renderTemas(a.id);
+                    if (expandedAsig === a.id) {
+                        console.log('Renderizando temas para asignatura:', a.id);
+                        renderTemas(a.id);
+                    }
                 });
             }, 10);
+        }
+
+        function toggleAsig(id) {
+            expandedAsig = expandedAsig === id ? null : id;
+            renderAsignaturas();
         }
 
         function deleteAsig(id) {
@@ -1462,6 +1582,10 @@
             renderTemas(aid);
         }
 
+        // ============ TEMAS - ESTADO ============
+        // Rastrear temas expandidos: { temaId: true/false }
+        let expandedTemas = {};
+
         function renderTemas(aid) {
             console.log('renderTemas() called for asig:', aid);
             const asig = data.asignaturas.find(x => x.id == aid);
@@ -1484,27 +1608,44 @@
                 return;
             }
             
-            container.innerHTML = asig.temas.map(t => `
-                <div style="font-size: 0.9rem; margin: 10px 0; padding: 12px; border-left: 3px solid var(--accent); background: rgba(188,140,255,0.08); border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <strong style="color: var(--accent);">📁 ${t.name}</strong>
-                        <button onclick="deleteTema(${aid}, ${t.id})" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 1.1rem; padding: 0;">🗑️</button>
+            container.innerHTML = asig.temas.map(t => {
+                const isExpanded = expandedTemas[t.id] === true;
+                return `
+                    <div style="font-size: 1rem; margin: 10px 0; padding: 14px; border-left: 3px solid var(--accent); background: rgba(188,140,255,0.08); border-radius: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; cursor: pointer; user-select: none;" onclick="toggleTema(${t.id}, ${aid})">
+                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                <span style="font-size: 1.2rem; transition: transform 0.3s ease; transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0)'}">▶</span>
+                                <strong style="color: var(--accent); font-size: 1.05rem;">📁 ${t.name}</strong>
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteTema(${aid}, ${t.id})" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 1.3rem; padding: 0; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>
+                        </div>
+                        ${isExpanded ? `
+                            <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <label style="font-size: 0.95rem; display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px; background: rgba(255,255,255,0.08); padding: 12px; border-radius: 10px; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                                    <span>📄 Subir Archivo (PDF, TXT, MD)</span>
+                                    <input type="file" id="file-input-${aid}-${t.id}" accept=".pdf,.txt,.md" onchange="addFile(event, ${aid}, ${t.id})" style="cursor: pointer; display: none;">
+                                </label>
+                                <div id="files-list-${t.id}" style="margin-top: 10px;"></div>
+                            </div>
+                        ` : ''}
                     </div>
-                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 10px; background: rgba(255,255,255,0.08); padding: 10px; border-radius: 8px;">
-                        <span>📄 Subir PDF</span>
-                        <input type="file" id="file-input-${aid}-${t.id}" accept=".pdf" onchange="addFile(event, ${aid}, ${t.id})" style="cursor: pointer; display: none;">
-                    </label>
-                    <div id="files-list-${t.id}" style="margin-top: 8px;"></div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             console.log('Renderizando archivos...');
             setTimeout(() => {
                 asig.temas.forEach(t => {
-                    console.log('Renderizando archivos para tema:', t.id);
-                    renderFiles(aid, t.id);
+                    if (expandedTemas[t.id] === true) {
+                        console.log('Renderizando archivos para tema:', t.id);
+                        renderFiles(aid, t.id);
+                    }
                 });
             }, 10);
+        }
+
+        function toggleTema(id, aid) {
+            expandedTemas[id] = !expandedTemas[id];
+            if (aid) renderTemas(aid);
         }
 
         function deleteTema(aid, tid) {
@@ -1600,17 +1741,17 @@
             console.log('Renderizando archivos para tema:', tid, 'Total:', tema.files.length);
             
             if (!tema.files || tema.files.length === 0) {
-                container.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 5px; font-style: italic;">Sin archivos cargados</div>';
+                container.innerHTML = '<div style="font-size: 0.9rem; color: var(--text-dim); margin-top: 8px; font-style: italic;">Sin archivos cargados</div>';
                 return;
             }
             
             container.innerHTML = tema.files.map((f, idx) => `
-                <div style="background: rgba(255,255,255,0.08); border: none; border-bottom:1px solid #333; margin: 5px 0; padding: 8px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer;" onclick="openPdf('${f.name.replace(/'/g, "\\'")}', '${f.content}')">
-                        <span style="color: var(--accent);">📄</span>
-                        <span style="color: var(--accent); font-size: 0.85rem;">${f.name}</span>
+                <div style="background: rgba(255,255,255,0.08); border: none; border-bottom:1px solid #333; margin: 8px 0; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;" onclick="openPdf('${f.name.replace(/'/g, "\\'")}', '${f.content}')">
+                        <span style="color: var(--accent); font-size: 1.2rem;">📄</span>
+                        <span style="color: var(--accent); font-size: 0.95rem;">${f.name}</span>
                     </div>
-                    <button style="background: none; border: none; color: var(--red); cursor: pointer; padding: 0; font-size: 1rem;" onclick="deleteFile(${aid}, ${tid}, ${f.id})">🗑️</button>
+                    <button style="background: none; border: none; color: var(--red); cursor: pointer; padding: 0; font-size: 1.3rem; transition: transform 0.2s ease;" onclick="deleteFile(${aid}, ${tid}, ${f.id})" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>
                 </div>
             `).join('');
         }
@@ -1634,6 +1775,7 @@
             saveData();
             renderFiles(aid, tid);
         }
+        
 
         function deleteAsig(id) {
             if (confirm("¿Borrar asignatura? Se eliminarán todos sus temas y datos de notas.")) {
@@ -1693,8 +1835,8 @@
                         <button onclick="deleteTema(${aid}, ${t.id})" style="background:none; border:none; color:var(--red); cursor: pointer; font-size: 1.2rem; padding: 0;">🗑️</button>
                     </div>
                     <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
-                        📄 Subir PDF
-                        <input type="file" id="file-input-${aid}-${t.id}" accept=".pdf" onchange="addFile(event, ${aid}, ${t.id})" style="cursor: pointer; display: none;">
+                        📄 Subir Archivo (PDF, TXT, MD)
+                        <input type="file" id="file-input-${aid}-${t.id}" accept=".pdf,.txt,.md" onchange="addFile(event, ${aid}, ${t.id})" style="cursor: pointer; display: none;">
                     </label>
                     <div id="files-list-${t.id}" style="margin-top: 8px;"></div>
                 </div>
@@ -2152,8 +2294,14 @@
         }
 
         function applyTheme() {
-            if (data.config.theme === 'light') document.body.classList.add('light-mode');
-            else document.body.classList.remove('light-mode');
+            const isDark = data.config.theme === 'dark';
+            if (isDark) {
+                document.body.classList.remove('light-mode');
+                document.documentElement.style.colorScheme = 'dark';
+            } else {
+                document.body.classList.add('light-mode');
+                document.documentElement.style.colorScheme = 'light';
+            }
         }
 
         function exportData() {
@@ -2190,20 +2338,195 @@
         }
 
         // ============ PDF VIEWER ============
-        function openPdf(name, content) {
-            document.getElementById('pdf-title').innerText = name;
-            document.getElementById('pdf-iframe').src = content;
-            document.getElementById('pdf-overlay').style.display = 'flex';
+let currentPdfData = { name: '', content: '' };
+
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function openPdf(name, content) {
+    const fileExtension = name.split('.').pop().toLowerCase();
+    const overlay = document.getElementById('pdf-overlay');
+    const title = document.getElementById('pdf-title');
+    const container = document.getElementById('pdf-content-container');
+    
+    currentPdfData = { name: name, content: content };
+    title.innerText = name;
+    
+    // 1. FORZAR ESTILO VERTICAL AL CONTENEDOR
+    container.style.display = 'block'; // Quita el flexbox si lo tuviera
+    container.style.overflowY = 'auto';
+    container.style.overflowX = 'hidden';
+    container.style.textAlign = 'center';
+    container.innerHTML = '<div style="color:white; padding:20px;">Cargando documento...</div>';
+    
+    overlay.style.display = 'flex';
+    container.scrollTop = 0; // Reset inicial
+
+    if (fileExtension === 'pdf') {
+        try {
+            const base64Data = content.split(',')[1];
+            const binary = atob(base64Data);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            const loadingTask = pdfjsLib.getDocument({ data: bytes });
+            const pdf = await loadingTask.promise;
+            
+            container.innerHTML = ''; 
+
+            // 2. RENDERIZADO VERTICAL PÁGINA A PÁGINA
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                
+                // Crear envoltorio para cada página (asegura el bloque vertical)
+                const pageWrapper = document.createElement('div');
+                pageWrapper.style.marginBottom = '20px';
+                pageWrapper.style.width = '100%';
+                
+                const canvas = document.createElement('canvas');
+                canvas.style.display = 'inline-block'; // Permite que el wrapper lo centre
+                canvas.style.width = '95%'; // Deja un pequeño margen lateral
+                canvas.style.height = 'auto';
+                canvas.style.borderRadius = '5px';
+                canvas.style.backgroundColor = 'white';
+                
+                pageWrapper.appendChild(canvas);
+                container.appendChild(pageWrapper);
+
+                // Ajustar resolución interna (Pixel Ratio) para que no se vea borroso
+                const viewport = page.getViewport({ scale: 2 }); 
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+            }
+
+            // 3. FORZAR EL SCROLL AL INICIO (PÁGINA 1) TRAS CARGAR
+            setTimeout(() => {
+                container.scrollTo({ top: 0, behavior: 'instant' });
+            }, 100);
+
+        } catch (error) {
+            console.error("Error:", error);
+            container.innerHTML = '<div style="color:white; padding:20px;">Error al cargar el PDF.</div>';
         }
 
-        function closePdf() {
-            document.getElementById('pdf-overlay').style.display = 'none';
-            document.getElementById('pdf-iframe').src = '';
+    } else if (fileExtension === 'txt' || fileExtension === 'md') {
+        // ... (Tu lógica de TXT y MD se mantiene igual)
+        const base64Data = content.split(',')[1];
+        const decodedText = decodeURIComponent(escape(atob(base64Data)));
+        if (fileExtension === 'txt') {
+            container.innerHTML = `<pre style="width:100%; height:100%; overflow:auto; padding:20px; white-space:pre-wrap; background:var(--glass-light); border-radius:12px; color:var(--text-main); font-family:monospace;">${decodedText}</pre>`;
+        } else {
+            container.innerHTML = `<div style="width:100%; height:100%; overflow:auto; padding:20px; background:var(--glass-light); border-radius:12px; color:var(--text-main);">${markdownToHtml(decodedText)}</div>`;
         }
+    }
+}
+
+function downloadCurrentPdf() {
+    if (!currentPdfData.content) {
+        alert('No hay archivo para descargar');
+        return;
+    }
+
+    const link = document.createElement('a');
+    link.href = currentPdfData.content;
+    link.download = currentPdfData.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function markdownToHtml(md) {
+    let html = md
+        // Headers
+        .replace(/^### (.*?)$/gm, '<h3 style="margin-top:20px; margin-bottom:10px; font-size:1.3rem; font-weight:bold; color:var(--accent);">$1</h3>')
+        .replace(/^## (.*?)$/gm, '<h2 style="margin-top:25px; margin-bottom:15px; font-size:1.5rem; font-weight:bold; color:var(--accent);">$1</h2>')
+        .replace(/^# (.*?)$/gm, '<h1 style="margin-top:30px; margin-bottom:20px; font-size:1.8rem; font-weight:bold; color:var(--accent);">$1</h1>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:bold; color:var(--accent);">$1</strong>')
+        .replace(/__(.*?)__/g, '<strong style="font-weight:bold; color:var(--accent);">$1</strong>')
+        // Italic
+        .replace(/\*(.*?)\*/g, '<em style="font-style:italic;">$1</em>')
+        .replace(/_(.*?)_/g, '<em style="font-style:italic;">$1</em>')
+        // Code inline
+        .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em;">$1</code>')
+        // Links
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color:var(--accent); text-decoration:underline;">$1</a>')
+        // Lists
+        .replace(/^\* (.*?)$/gm, '<li style="margin-left:20px;">$1</li>')
+        .replace(/^- (.*?)$/gm, '<li style="margin-left:20px;">$1</li>')
+        .replace(/^\d+\. (.*?)$/gm, '<li style="margin-left:20px;">$1</li>')
+        // Line breaks
+        .replace(/\n\n/g, '</p><p style="margin:15px 0;">')
+        .replace(/\n/g, '<br>');
+    
+    html = '<p style="margin:15px 0;">' + html + '</p>';
+    return html;
+}
+
+function closePdf() {
+    document.getElementById('pdf-overlay').style.display = 'none';
+    document.getElementById('pdf-content-container').innerHTML = '';
+    currentPdfData = { name: '', content: '' };
+}
 
         // ============ INICIALIZACIÓN ============
+        // Detectar preferencia del sistema operativo si es la primera vez
+        if (!localStorage.getItem('APP_GESTION') || !data.config.theme) {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            data.config.theme = prefersDark ? 'dark' : 'light';
+            saveData();
+        }
+        
         applyTheme();
         renderInicio();
+        
+        // Cargar gráficos de gastos automáticamente al iniciar
+        setTimeout(() => {
+            const totals = { Alquiler: 0, Transporte: 0, Luz: 0, Agua: 0, Compra: 0, Comida: 0 };
+            const counts = { Alquiler: 0, Transporte: 0, Luz: 0, Agua: 0, Compra: 0, Comida: 0 };
+            let general = 0;
+            gastos.movimientos.forEach(g => {
+                if (totals.hasOwnProperty(g.cat)) {
+                    totals[g.cat] += g.monto;
+                    counts[g.cat]++;
+                    general += g.monto;
+                }
+            });
+            // Cargar gráficos siempre, incluso sin gastos (mostrará valores en 0)
+            if (document.getElementById('pieChart')) {
+                updateCharts(totals, general);
+            }
+        }, 300);
+
+        // ============ DETECTAR CAMBIOS EN PREFERENCIA DEL SISTEMA ============
+        if (window.matchMedia) {
+            const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            
+            // Listener para cambios en la preferencia del sistema
+            darkModeQuery.addEventListener('change', (e) => {
+                // Si no ha guardado preferencia manual, seguir el sistema
+                if (!localStorage.getItem('theme_preference_manual')) {
+                    data.config.theme = e.matches ? 'dark' : 'light';
+                    saveData();
+                    applyTheme();
+                }
+            });
+        }
+
+        // Marcar cuando el usuario cambia el tema manualmente
+        const originalToggleTheme = toggleTheme;
+        toggleTheme = function() {
+            localStorage.setItem('theme_preference_manual', 'true');
+            originalToggleTheme();
+        };
 
         // ============ SERVICE WORKER (PWA) ============
         if ('serviceWorker' in navigator) {
@@ -2219,6 +2542,9 @@
             deferredPrompt = e;
             console.log('✓ App lista para instalar');
         });
+
+        
+
     </script>
 
 </body>
