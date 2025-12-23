@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crystal-pro-v2.2';
+const CACHE_NAME = 'Agendav2.2';
 const STATIC_ASSETS = [
     'app.html',
     'manifest.json'
@@ -108,12 +108,12 @@ self.addEventListener('push', (event) => {
         body: data.body,
         icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect fill="%23bc8cff" width="192" height="192"/><text x="50%" y="50%" font-size="100" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">CP</text></svg>',
         badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect fill="%23bc8cff" width="96" height="96"/></svg>',
-        tag: 'crystal-pro',
+        tag: 'Agenda',
         requireInteraction: false
     };
 
     event.waitUntil(
-        self.registration.showNotification('Crystal Pro', options)
+        self.registration.showNotification('Agenda', options)
     );
 });
 

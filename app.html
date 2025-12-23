@@ -1216,6 +1216,28 @@
     </nav>
 
     <script>
+
+function loadStaticDate() {
+    const ahora = new Date();
+    const element = document.getElementById('live-date');
+    
+    if (!element) return;
+
+    // Formatear solo la fecha: "martes, 23 de diciembre"
+    const fechaTexto = ahora.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+    });
+
+    // Insertar en el HTML con la primera letra en mayúscula
+    element.style.textTransform = "capitalize";
+    element.innerText = fechaTexto;
+}
+
+// Llamar a la función al cargar el script
+loadStaticDate();
+
         // ============ DATOS GLOBALES ============
         let data = JSON.parse(localStorage.getItem('APP_GESTION')) || {
             asignaturas: [],
@@ -1321,11 +1343,12 @@
         }
 
         // ============ INICIO ============
-       function renderInicio() {
+ function renderInicio() {
+    const ahora = new Date();
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    // Limpieza de datos pasados
+    // 1. Limpieza de datos pasados (Exámenes)
     data.exams = data.exams.filter(ex => {
         const fechaExamen = new Date(ex.date);
         fechaExamen.setHours(0, 0, 0, 0);
@@ -1333,14 +1356,58 @@
     });
     saveData();
 
-    // Render Tareas (se mantiene igual)
+    // 2. LÓGICA DE HORARIO DIARIO
+    const horarioDiv = document.getElementById('horario-hoy');
+    if (horarioDiv) {
+        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        const nombreDiaHoy = diasSemana[ahora.getDay()];
+        const clasesHoy = data.horario[nombreDiaHoy] || [];
+        const horaActualStr = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+        let htmlHorario = ``;
+
+        if (clasesHoy.length === 0) {
+            htmlHorario += `<div style="color:var(--text-dim); font-size:0.8rem; text-align:center; padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px dashed rgba(255,255,255,0.1);">No hay clases programadas hoy</div>`;
+        } else {
+            htmlHorario += [...clasesHoy]
+                .sort((a, b) => a.start.localeCompare(b.start))
+                .map(clase => {
+                    const esAhora = horaActualStr >= clase.start && horaActualStr <= clase.end;
+                    // Definición de colores e iconos según el tipo
+                    const esLab = clase.type.toLowerCase().includes('practica') || clase.type.toLowerCase().includes('laboratorio');
+                    const colorTipo = esLab ? '#3fb950' : '#bc8cff'; // Verde para lab, Púrpura para clase
+                    const iconoTipo = esLab ? '🧪' : '📚';
+
+                    return `
+                        <div style="display:flex; align-items:center; gap:12px; background:${esAhora ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}; 
+                             padding:12px; border-radius:12px; margin-bottom:8px; border-left:4px solid ${colorTipo};
+                             border: ${esAhora ? '1px solid ' + colorTipo : '1px solid transparent'}; transition: all 0.3s ease;">
+                            <div style="min-width:65px; text-align:center; border-right:1px solid rgba(255,255,255,0.1); padding-right:10px;">
+                                <div style="font-weight:bold; font-size:0.8rem; color:${esAhora ? colorTipo : 'white'}">${clase.start}</div>
+                                <div style="font-size:0.6rem; color:var(--text-dim)">${clase.end}</div>
+                            </div>
+                            <div style="flex:1">
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="font-size:0.9rem;">${iconoTipo}</span>
+                                    <span style="font-weight:bold; font-size:0.9rem;">${clase.name}</span>
+                                </div>
+                                <div style="font-size:0.65rem; color:${colorTipo}; text-transform:uppercase; font-weight:bold; margin-top:2px;">${clase.type}</div>
+                            </div>
+                            ${esAhora ? `<div style="background:${colorTipo}; color:black; font-size:0.6rem; font-weight:900; padding:2px 6px; border-radius:4px; animation: pulse 2s infinite;">AHORA</div>` : ''}
+                        </div>`;
+                }).join('');
+        }
+        horarioDiv.innerHTML = htmlHorario;
+    }
+
+    // 3. Render Tareas
     document.getElementById('todo-list').innerHTML = data.todos.map(t => `
         <div class="item-row ${t.done ? 'done' : ''}" onclick="toggleTodo(${t.id})">
             <span>${t.done ? '✅' : '⭕'} ${t.text}</span>
         </div>
     `).join('');
 
-    // Render Exámenes
+    // 4. Render Exámenes
     const exList = document.getElementById('exam-list');
     const sortedExams = data.exams.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -1379,7 +1446,6 @@
         }).join('');
     }
 }
-
 function deleteExam(id) {
     // Usamos el panel de aviso visual que creamos antes
     if (!confirm("¿Borrar este examen de la lista?")) return;
@@ -2310,7 +2376,7 @@ function deleteExam(id) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `crystal_pro_backup_${new Date().getTime()}.json`;
+            a.download = `agenda_backup_${new Date().getTime()}.json`;
             a.click();
         }
 
