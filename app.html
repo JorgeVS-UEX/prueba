@@ -1429,47 +1429,43 @@ loadStaticDate();
         }
 
         // ============ INICIO ============
- function renderInicio() {
+function renderInicio() {
     const ahora = new Date();
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    // 1. Limpieza de datos pasados (Exámenes)
+    // 1. Limpieza de exámenes pasados
     data.exams = data.exams.filter(ex => {
-        const fechaExamen = new Date(ex.date);
-        fechaExamen.setHours(0, 0, 0, 0);
-        return fechaExamen >= hoy;
+        const fechaExamen = new Date(ex.date + 'T00:00'); // fuerza local
+        return !isNaN(fechaExamen) && fechaExamen >= hoy;
     });
     saveData();
 
-    // 2. LÓGICA DE HORARIO DIARIO
+    // 2. Horario diario
     const horarioDiv = document.getElementById('horario-hoy');
     if (horarioDiv) {
-        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        const diasSemana = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
         const nombreDiaHoy = diasSemana[ahora.getDay()];
         const clasesHoy = data.horario[nombreDiaHoy] || [];
-        const horaActualStr = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+        const horaActualStr = ahora.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',hour12:false});
 
         let htmlHorario = ``;
-
         if (clasesHoy.length === 0) {
-            htmlHorario += `<div style="color:var(--text-dim); font-size:0.8rem; text-align:center; padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px dashed rgba(255,255,255,0.1);">No hay clases programadas hoy</div>`;
+            htmlHorario = `<div style="color:var(--text-dim); font-size:0.8rem; text-align:center; padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px dashed rgba(255,255,255,0.1);">No hay clases programadas hoy</div>`;
         } else {
-            htmlHorario += [...clasesHoy]
-                .sort((a, b) => a.start.localeCompare(b.start))
-                .map(clase => {
+            htmlHorario = [...clasesHoy]
+                .sort((a,b)=>a.start.localeCompare(b.start))
+                .map(clase=>{
                     const esAhora = horaActualStr >= clase.start && horaActualStr <= clase.end;
-                    // Definición de colores e iconos según el tipo
                     const esLab = clase.type.toLowerCase().includes('practica') || clase.type.toLowerCase().includes('laboratorio');
-                    const colorTipo = esLab ? '#3fb950' : '#bc8cff'; // Verde para lab, Púrpura para clase
+                    const colorTipo = esLab ? '#3fb950' : '#bc8cff';
                     const iconoTipo = esLab ? '🧪' : '📚';
-
                     return `
-                        <div style="display:flex; align-items:center; gap:12px; background:${esAhora ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)'}; 
+                        <div style="display:flex; align-items:center; gap:12px; background:${esAhora?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.05)'}; 
                              padding:12px; border-radius:12px; margin-bottom:8px; border-left:4px solid ${colorTipo};
-                             border: ${esAhora ? '1px solid ' + colorTipo : '1px solid transparent'}; transition: all 0.3s ease;">
+                             border:${esAhora?'1px solid '+colorTipo:'1px solid transparent'}; transition:all 0.3s ease;">
                             <div style="min-width:65px; text-align:center; border-right:1px solid rgba(255,255,255,0.1); padding-right:10px;">
-                                <div style="font-weight:bold; font-size:0.8rem; color:${esAhora ? colorTipo : 'white'}">${clase.start}</div>
+                                <div style="font-weight:bold; font-size:0.8rem; color:${esAhora?colorTipo:'white'}">${clase.start}</div>
                                 <div style="font-size:0.6rem; color:var(--text-dim)">${clase.end}</div>
                             </div>
                             <div style="flex:1">
@@ -1479,59 +1475,90 @@ loadStaticDate();
                                 </div>
                                 <div style="font-size:0.65rem; color:${colorTipo}; text-transform:uppercase; font-weight:bold; margin-top:2px;">${clase.type}</div>
                             </div>
-                            ${esAhora ? `<div style="background:${colorTipo}; color:black; font-size:0.6rem; font-weight:900; padding:2px 6px; border-radius:4px; animation: pulse 2s infinite;">AHORA</div>` : ''}
+                            ${esAhora?`<div style="background:${colorTipo}; color:black; font-size:0.6rem; font-weight:900; padding:2px 6px; border-radius:4px; animation:pulse 2s infinite;">AHORA</div>`:''}
                         </div>`;
                 }).join('');
         }
         horarioDiv.innerHTML = htmlHorario;
     }
 
-    // 3. Render Tareas
-    document.getElementById('todo-list').innerHTML = data.todos.map(t => `
-        <div class="item-row ${t.done ? 'done' : ''}" onclick="toggleTodo(${t.id})">
-            <span>${t.done ? '✅' : '⭕'} ${t.text}</span>
-        </div>
-    `).join('');
+    // 3. Tareas
+    const todoList = document.getElementById('todo-list');
+    if (todoList) {
+        todoList.innerHTML = data.todos.map(t=>`
+            <div class="item-row ${t.done?'done':''}" onclick="toggleTodo(${t.id})">
+                <span>${t.done?'✅':'⭕'} ${t.text}</span>
+            </div>
+        `).join('');
+    }
 
-    // 4. Render Exámenes
+    // 4. Exámenes
     const exList = document.getElementById('exam-list');
-    const sortedExams = data.exams.sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (!exList) return;
 
-    if (sortedExams.length === 0) {
+    const sortedExams = [...data.exams].sort((a,b)=>new Date(a.date+'T00:00')-new Date(b.date+'T00:00'));
+
+    if (sortedExams.length===0) {
         exList.innerHTML = '<div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">No hay exámenes próximos</div>';
     } else {
-        exList.innerHTML = sortedExams.map(ex => {
-            const diff = Math.ceil((new Date(ex.date) - hoy) / (1000 * 60 * 60 * 24));
-            const asig = data.asignaturas.find(a => a.id == ex.asigId);
-            
-            let fileCount = 0;
+        exList.innerHTML = sortedExams.map(ex=>{
+            const fechaEx = new Date(ex.date+'T00:00');
+            const diff = Math.ceil((fechaEx-hoy)/(1000*60*60*24));
+            const asig = data.asignaturas.find(a=>String(a.id)===String(ex.asigId));
+
+            let fileCount=0;
+            let temasHtml = '';
             if (asig && ex.temas) {
-                ex.temas.forEach(tid => {
-                    const tema = asig.temas.find(t => t.id == tid);
-                    if (tema && tema.files) fileCount += tema.files.length;
-                });
+                temasHtml = ex.temas.map(tid=>{
+                    const tema = asig.temas.find(t=>String(t.id)===String(tid));
+                    if (!tema) return '';
+                    const count = tema.files ? tema.files.length : 0;
+                    fileCount += count;
+
+                    // Mostrar archivos con botón para abrir
+                    const filesHtml = (tema.files || []).map(f=>`
+                        <div style="margin-left:15px; font-size:0.75rem; color:var(--text-dim); display:flex; align-items:center; gap:6px; margin-top:4px;">
+                            📄 <button onclick="openPdf('${f.name}', '${f.content}')" 
+                                style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:0.75rem; text-decoration:underline;">
+                                ${f.name}
+                            </button>
+                        </div>
+                    `).join('');
+
+                    return `
+                        <div style="margin-bottom:12px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.05);">
+                            <div style="font-weight:bold; font-size:0.85rem;">${tema.name}</div>
+                            <div style="font-size:0.7rem; color:var(--text-dim);">📂 ${count} archivo${count!==1?'s':''}</div>
+                            ${filesHtml}
+                        </div>
+                    `;
+                }).join('');
             }
-            
+
             return `
                 <div class="item-row exam-card" onclick="toggleExamFiles('${ex.id}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
                     <div style="flex:1;">
                         <div style="font-weight:bold">${ex.name}</div>
-                        <div style="font-size:0.7rem; color:var(--accent)">${asig ? asig.name : 'Asignatura borrada'} - ${ex.date}</div>
-                        <div style="font-size:0.65rem; color:var(--text-dim); margin-top:4px;">📚 ${fileCount} archivo${fileCount !== 1 ? 's' : ''}</div>
+                        <div style="font-size:0.7rem; color:var(--accent)">${asig?asig.name:'Asignatura borrada'} - ${ex.date}</div>
+                        <div style="font-size:0.65rem; color:var(--text-dim); margin-top:4px;">📚 ${fileCount} archivo${fileCount!==1?'s':''}</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <span class="days-left">${diff === 0 ? 'HOY' : 'Faltan ' + diff + 'd'}</span>
+                        <span class="days-left">${diff===0?'HOY':'Faltan '+diff+'d'}</span>
                         <button onclick="event.stopPropagation(); deleteExam('${ex.id}')" 
                                 style="background:none; border:none; color:var(--red); cursor:pointer; font-size:1.3rem; padding:5px;">
                             🗑️
                         </button>
                     </div>
                 </div>
-                <div id="ex-files-${ex.id}" class="sub-section" style="display:none; padding:15px; margin-top:10px; background:rgba(255,255,255,0.05); border-radius:12px;"></div>
+                <div id="ex-files-${ex.id}" class="sub-section" style="display:none; padding:15px; margin-top:10px; background:rgba(255,255,255,0.05); border-radius:12px;">
+                    ${temasHtml || '<div style="color:var(--text-dim); font-size:0.8rem;">No hay temas seleccionados</div>'}
+                </div>
             `;
         }).join('');
     }
 }
+
+
 function deleteExam(id) {
     // Usamos el panel de aviso visual que creamos antes
     if (!confirm("¿Borrar este examen de la lista?")) return;
