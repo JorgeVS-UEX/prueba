@@ -1,14 +1,22 @@
 {
-  "name": "Agenda",
-  "short_name": "Agenda",
-  "description": "Gestor de tareas, asignaturas, notas, gastos y horario todo en uno",
+  "name": "Health",
+  "short_name": "Health",
+  "description": "App de salud integral con sincronización de dispositivos y gestión de datos",
   "scope": "./",
-  "start_url": "app.html",
+  "start_url": "index.html",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#000000",
+  "theme_color": "#2196F3",
   "background_color": "#000000",
-  "categories": ["productivity", "education"],
+  "categories": ["health", "fitness"],
+  "screenshots": [
+    {
+      "src": "logo.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
   "icons": [
     {
       "src": "logo.png",
@@ -31,29 +39,30 @@
   ],
   "shortcuts": [
     {
-      "name": "Asignaturas",
-      "short_name": "Asignaturas",
-      "url": "app.html?section=asignaturas",
+      "name": "Registrar Pasos",
+      "short_name": "Pasos",
+      "url": "index.html?tab=tracking",
       "icons": [{ "src": "logo.png", "sizes": "96x96" }]
     },
     {
-      "name": "Notas",
-      "short_name": "Notas",
-      "url": "app.html?section=notas",
+      "name": "Registrar Comida",
+      "short_name": "Comida",
+      "url": "index.html?tab=comidas",
       "icons": [{ "src": "logo.png", "sizes": "96x96" }]
     }
   ],
   "share_target": {
-    "action": "app.html",
+    "action": "index.html",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
       "files": [
         {
-          "name": "pdf",
-          "accept": ["application/pdf"]
+          "name": "data",
+          "accept": ["application/json", "text/csv"]
         }
       ]
     }
-  }
+  },
+  "prefer_related_applications": false
 }
